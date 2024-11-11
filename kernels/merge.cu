@@ -1,5 +1,5 @@
 #include <cuda_runtime.h>
-#include "gpu_merge_helper.h"
+#include "merge.cuh"
 
 template <typename Key, typename Value>
 __global__ void mergeKernel(Pair<Key, Value>* d_arr1, int size1, Pair<Key, Value>* d_arr2, int size2, Pair<Key, Value>* d_merged) {

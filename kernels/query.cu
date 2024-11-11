@@ -1,3 +1,5 @@
+#include <lsm.cuh>
+
 template <typename Key, typename Value>
 __device__ bool binarySearchFirstOccurrence(const Pair<Key, Value>* data, int size, Key key, Value& value) {
     int left = 0;
