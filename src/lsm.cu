@@ -54,20 +54,22 @@ __host__ bool lsm<Key, Value>::updateKeys(Pair<key, Valye>* kv, int batch_size)
     int level_size = batch_size; //b
     int current_level = 0;
     int merged_size = batch_size;
+    
+    Pair<Key, Value>* m = getMemory();
 
     while(getNumBatches() & (1 << currentLevel)){
         Pair<Key, Value>* cur = getMemory() + offset;
 
         merged_size += level_size;
 
-        d_buffer = mgpu::merge();
+        d_buffer = mgpu::merge(m + offset, level_size, d_buffer, level_size);
         cudaMemset(cur, 0, level_size * sizeof(Pair<Key, Value>));
 
         offset += level_size;
         current_level++;
         level_size <<= 1
     }
-    Pair<Key, Value>* m = getMemory();
+    
     cudaMemcpy(m + offset, d_buffer, merged_size * sizeof(Pair<Key, Value>), cudaMemcpyDeviceToDevice);
     incrementBatchCounter();
     cudaFree(d_buffer);
