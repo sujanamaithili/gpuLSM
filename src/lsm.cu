@@ -1,5 +1,5 @@
-#include "gpu_lsm_tree.h"
-#include "kernels/query.cuh"
+#include "lsm.cuh"
+#include "query.cuh"
 #include <cstdio>
 #include <cuda_runtime.h>
 
@@ -32,17 +32,8 @@ __host__ __device__ lsmTree<Key, Value>::~lsmTree() {
     }
 }
 
-
 template <typename Key, typename Value>
-__host__ Value* lsm<Key, Value>::queryBatch(Key* batch, int batch_size)
-{
-    Value* results = new Value[batch_size];
-    
-    
-}
-
-template <typename Key, typename Value>
-__host__ bool lsm<Key, Value>::updateKeys(Pair<key, Valye>* kv, int batch_size)
+__host__ bool lsmTree<Key, Value>::updateKeys(const Pair<Key, Value>* kv, int batch_size)
 {
     
     Pair<Key, Value>* d_buffer;

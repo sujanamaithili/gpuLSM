@@ -1,6 +1,6 @@
 # Compiler and flags
 NVCC := nvcc
-CXXFLAGS := -std=c++11 -I./kernels -I./src
+CXXFLAGS := -std=c++11 -Ikernels -Isrc
 
 # Source files
 SRCS := src/lsm.cu kernels/merge.cu kernels/query.cu
