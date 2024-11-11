@@ -30,3 +30,47 @@ __host__ __device__ lsmTree<Key, Value>::~lsmTree() {
         cudaFree(memory);
     }
 }
+
+
+template <typename Key, typename Value>
+__host__ Value* lsm<Key, Value>::queryBatch(Key* batch, int batch_size)
+{
+    Value* results = new Value[batch_size];
+    
+    
+}
+
+template <typename Key, typename Value>
+__host__ bool lsm<Key, Value>::updateKeys(Pair<key, Valye>* kv, int batch_size)
+{
+    
+    Pair<Key, Value>* d_buffer;
+    cudaMalloc(&d_buffer, batch_size * sizeof(Pair<Key, Value>));
+    cudaMemcpy(d_buffer, kv, batch_size * sizeof(Pair<Key, Value>), cudaMemcpyHostToDevice);
+    cudaMalloc(&tempd_buffer, batch_size * sizeof(Pair<Key, Value>));
+    cub::DeviceRadixSort::SortPairs(tempd_buffer, batch_size, d_buffer, d_buffer, batch_size);
+
+    int offset = 0;
+    int level_size = batch_size; //b
+    int current_level = 0;
+    int merged_size = batch_size;
+
+    while(getNumBatches() & (1 << currentLevel)){
+        Pair<Key, Value>* cur = getMemory() + offset;
+
+        merged_size += level_size;
+
+        d_buffer = mgpu::merge();
+        cudaMemset(cur, 0, level_size * sizeof(Pair<Key, Value>));
+
+        offset += level_size;
+        current_level++;
+        level_size <<= 1
+    }
+    Pair<Key, Value>* m = getMemory();
+    cudaMemcpy(m + offset, d_buffer, merged_size * sizeof(Pair<Key, Value>), cudaMemcpyDeviceToDevice);
+    incrementBatchCounter();
+    cudaFree(d_buffer);
+    return true;
+}
+
