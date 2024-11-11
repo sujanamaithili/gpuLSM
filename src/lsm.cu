@@ -1,4 +1,5 @@
 #include "gpu_lsm_tree.h"
+#include "kernels/query.cuh"
 #include <cstdio>
 #include <cuda_runtime.h>
 
@@ -76,3 +77,35 @@ __host__ bool lsm<Key, Value>::updateKeys(Pair<key, Valye>* kv, int batch_size)
     return true;
 }
 
+
+template <typename Key, typename Value>
+__host__ void lsmTree<Key, Value>::queryKeys(const Key* keys, int size, Value* results, bool* foundFlags) {
+    // Allocate device memory for keys, results, and found flags
+    Key* d_keys;
+    Value* d_results;
+    bool* d_foundFlags;
+
+    cudaMalloc(&d_keys, size * sizeof(Key));
+    cudaMalloc(&d_results, size * sizeof(Value));
+    cudaMalloc(&d_foundFlags, size * sizeof(bool));
+    cudaMemcpy(d_keys, keys, size * sizeof(Key), cudaMemcpyHostToDevice);
+
+    // Get device pointer to the LSM tree memory
+    Pair<Key, Value>* d_memory = getMemory();
+    int num_levels = numLevels;
+    int buffer_size = bufferSize;
+
+    int threadsPerBlock = 256;
+    int blocksPerGrid = (size + threadsPerBlock - 1) / threadsPerBlock;
+    queryKeysKernel<<<blocksPerGrid, threadsPerBlock>>>(
+        d_keys, d_results, d_foundFlags, size, d_memory, num_levels, buffer_size);
+
+    // Copy results back to host
+    cudaMemcpy(results, d_results, size * sizeof(Value), cudaMemcpyDeviceToHost);
+    cudaMemcpy(foundFlags, d_foundFlags, size * sizeof(bool), cudaMemcpyDeviceToHost);
+
+    // Free device memory
+    cudaFree(d_keys);
+    cudaFree(d_results);
+    cudaFree(d_foundFlags);
+}
