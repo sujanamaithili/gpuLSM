@@ -1,5 +1,6 @@
 #include "lsm.cuh"
 #include "query.cuh"
+#include "merge.cuh"
 #include <cstdio>
 #include <cuda_runtime.h>
 
@@ -54,7 +55,7 @@ __host__ bool lsmTree<Key, Value>::updateKeys(const Pair<Key, Value>* kv, int ba
 
         merged_size += level_size;
 
-        d_buffer = mgpu::merge(m + offset, level_size, d_buffer, level_size);
+        d_buffer = merge(m + offset, level_size, d_buffer, level_size);
         cudaMemset(cur, 0, level_size * sizeof(Pair<Key, Value>));
 
         offset += level_size;
