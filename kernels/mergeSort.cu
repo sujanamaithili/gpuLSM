@@ -108,7 +108,7 @@ bool isSorted(int* arr, int n)
 
 int main() 
 {
-    const int N = 1 << 20;
+    const int N = 1 << 23;
     int* arrGPU = new int[N];
     int* arrCPU = new int[N];
     int* temp = new int[N];
@@ -121,6 +121,7 @@ int main()
     }
 
     clock_t start, end;
+    double time_taken;
     // Measure GPU merge sort time
     start = clock();
     mergeSortGPU(arrGPU, N);
@@ -130,19 +131,17 @@ int main()
 
     // Measure CPU merge sort time
     start = clock();
-    mergeSortCPU(arrCPU, N);
+    mergeSortCPU(arrCPU, temp, 0, N);
     end = clock();
     time_taken = ((double)(end - start))/ CLOCKS_PER_SEC;
-    printf("Time taken in GPU = %lf\n", time_taken);
+    printf("Time taken in CPU = %lf\n", time_taken);
 
     // Check if the arrays are sorted
     bool gpuSorted = isSorted(arrGPU, N);
     bool cpuSorted = isSorted(arrCPU, N);
 
-    std::cout << "GPU Merge Sort: " << (gpuSorted ? "Sorted correctly" : "Not sorted correctly")
-              << " in " << gpuTime.count() << " seconds." << std::endl;
-    std::cout << "CPU Merge Sort: " << (cpuSorted ? "Sorted correctly" : "Not sorted correctly")
-              << " in " << cpuTime.count() << " seconds." << std::endl;
+    std::cout << "GPU Merge Sort: " << (gpuSorted ? "Sorted correctly" : "Not sorted correctly") <<  std::endl;
+    std::cout << "CPU Merge Sort: " << (cpuSorted ? "Sorted correctly" : "Not sorted correctly") <<  std::endl;
 
     // Clean up
     delete[] arrGPU;
