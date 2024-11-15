@@ -74,6 +74,19 @@ void bitonicSortCPU(Pair<Key, Value>* arr, long int n) {
 }
 
 template <typename Key, typename Value>
+void sortBySegment(Pair<Key, Value>* d_result, int* d_maxoffset, int numQueries) {
+    int offset = 0;
+    for(int i=0; i < numQueries; i++){
+        int segmentLength;
+        cudaMemcpy(&segmentLength, &d_maxoffset[i], sizeof(int), cudaMemcpyDeviceToHost);
+        
+        bitonicSortGPU(d_result + offset, segmentLength);
+
+        offset += segmentLength;
+    }
+}
+
+template <typename Key, typename Value>
 bool isSorted(Pair<Key, Value>* arr, long int n) {
     for (long int i = 1; i < n; i++) {
         if (arr[i - 1].first > arr[i].first) return false;
