@@ -3,7 +3,7 @@
 #include "merge.cuh"
 #include "bitonicSort.cuh"
 #include <cstdio>
-#include <cuda_runtime.h>
+#include <cuda.h>
 
 template class lsmTree<int, int>;
 
@@ -88,13 +88,12 @@ __host__ void lsmTree<Key, Value>::queryKeys(const Key* keys, int size, Value* r
 
     // Get device pointer to the LSM tree memory
     Pair<Key, Value>* d_memory = getMemory();
-    int num_levels = numLevels;
-    int buffer_size = bufferSize;
+    int num_levels = getNumLevels();
+    int buffer_size = getBufferSize();
 
     int threadsPerBlock = 256;
     int blocksPerGrid = (size + threadsPerBlock - 1) / threadsPerBlock;
-    queryKeysKernel<<<blocksPerGrid, threadsPerBlock>>>(
-        d_keys, d_results, d_foundFlags, size, d_memory, num_levels, buffer_size);
+    queryKeysKernel<<<blocksPerGrid, threadsPerBlock>>>(d_keys, d_results, d_foundFlags, size, d_memory, num_levels, buffer_size);
 
     // Copy results back to host
     cudaMemcpy(results, d_results, size * sizeof(Value), cudaMemcpyDeviceToHost);
@@ -105,6 +104,7 @@ __host__ void lsmTree<Key, Value>::queryKeys(const Key* keys, int size, Value* r
     cudaFree(d_results);
     cudaFree(d_foundFlags);
 }
+
 
 template <typename Key, typename Value>
 __host__ void lsmTree<Key, Value>::countKeys(const Key* k1, const Key* k2, int numQueries, int* counts) {

@@ -1,4 +1,7 @@
 #include <lsm.cuh>
+#include <query.cuh>
+#include <cuda.h>
+#include <cstdio>
 
 template <typename Key, typename Value>
 __device__ bool binarySearchFirstOccurrence(const Pair<Key, Value>* data, int size, Key key, Value& value) {
@@ -59,3 +62,6 @@ __global__ void queryKeysKernel(const Key* d_keys, Value* d_results, bool* d_fou
         d_foundFlags[i] = false;
     }
 }
+
+//TODO : Check if this is required ? Explicit template instantiation for int, int
+template __global__ void queryKeysKernel<int, int>(const int*, int*, bool*, int, const Pair<int, int>*, int, int);

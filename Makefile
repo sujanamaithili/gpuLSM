@@ -3,7 +3,7 @@ NVCC := nvcc
 CXXFLAGS := -std=c++11 -Ikernels -Isrc
 
 # Source files
-SRCS := src/lsm.cu src/main.cu kernels/merge.cu kernels/bitonicSort.cu
+SRCS := src/lsm.cu kernels/query.cu kernels/merge.cu kernels/bitonicSort.cu src/main.cu
 
 # Object files
 OBJS := $(SRCS:.cu=.o)
