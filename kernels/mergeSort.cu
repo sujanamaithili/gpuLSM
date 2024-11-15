@@ -162,7 +162,7 @@ void testMergeSort() {
     cudaEventDestroy(stop);
 }
 
-int main() {
-    testMergeSort();
-    return 0;
-}
+// int main() {
+//     testMergeSort();
+//     return 0;
+// }

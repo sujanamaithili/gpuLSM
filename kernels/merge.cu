@@ -150,63 +150,63 @@ void testMerge() {
 //     return 0;
 // }
 
-int main(int argc, char** argv) {
-    if (argc < 3) {
-        std::cerr << "Usage: " << argv[0] << " <size1> <size2>" << std::endl;
-        return 1;
-    }
+// int main(int argc, char** argv) {
+//     if (argc < 3) {
+//         std::cerr << "Usage: " << argv[0] << " <size1> <size2>" << std::endl;
+//         return 1;
+//     }
 
-    int size1 = std::stoi(argv[1]);
-    int size2 = std::stoi(argv[2]);
+//     int size1 = std::stoi(argv[1]);
+//     int size2 = std::stoi(argv[2]);
 
-    // Generate random sorted arrays of Pair objects
-    std::vector<Pair<int, int>> arr1(size1), arr2(size2);
-    for (int i = 0; i < size1; ++i) arr1[i] = Pair<int, int>(rand() % 10000, rand() % 100);
-    for (int i = 0; i < size2; ++i) arr2[i] = Pair<int, int>(rand() % 10000, rand() % 100);
-    std::sort(arr1.begin(), arr1.end(), [](const Pair<int, int>& a, const Pair<int, int>& b) { return a.first < b.first; });
-    std::sort(arr2.begin(), arr2.end(), [](const Pair<int, int>& a, const Pair<int, int>& b) { return a.first < b.first; });
+//     // Generate random sorted arrays of Pair objects
+//     std::vector<Pair<int, int>> arr1(size1), arr2(size2);
+//     for (int i = 0; i < size1; ++i) arr1[i] = Pair<int, int>(rand() % 10000, rand() % 100);
+//     for (int i = 0; i < size2; ++i) arr2[i] = Pair<int, int>(rand() % 10000, rand() % 100);
+//     std::sort(arr1.begin(), arr1.end(), [](const Pair<int, int>& a, const Pair<int, int>& b) { return a.first < b.first; });
+//     std::sort(arr2.begin(), arr2.end(), [](const Pair<int, int>& a, const Pair<int, int>& b) { return a.first < b.first; });
 
-    // Measure CPU time
-    auto cpu_start = std::chrono::high_resolution_clock::now();
-    std::vector<Pair<int, int>> mergedCPU = mergeCPU(arr1, arr2);
-    auto cpu_end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> cpu_duration = cpu_end - cpu_start;
-    std::cout << "CPU merge time: " << cpu_duration.count() << " seconds" << std::endl;
+//     // Measure CPU time
+//     auto cpu_start = std::chrono::high_resolution_clock::now();
+//     std::vector<Pair<int, int>> mergedCPU = mergeCPU(arr1, arr2);
+//     auto cpu_end = std::chrono::high_resolution_clock::now();
+//     std::chrono::duration<double> cpu_duration = cpu_end - cpu_start;
+//     std::cout << "CPU merge time: " << cpu_duration.count() << " seconds" << std::endl;
 
-    // Copy data to GPU
-    Pair<int, int> *d_arr1, *d_arr2;
-    cudaMalloc(&d_arr1, size1 * sizeof(Pair<int, int>));
-    cudaMalloc(&d_arr2, size2 * sizeof(Pair<int, int>));
+//     // Copy data to GPU
+//     Pair<int, int> *d_arr1, *d_arr2;
+//     cudaMalloc(&d_arr1, size1 * sizeof(Pair<int, int>));
+//     cudaMalloc(&d_arr2, size2 * sizeof(Pair<int, int>));
 
 
-    // Measure GPU time
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-    cudaEventRecord(start);
-
-    
-    cudaMemcpy(d_arr1, arr1.data(), size1 * sizeof(Pair<int, int>), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_arr2, arr2.data(), size2 * sizeof(Pair<int, int>), cudaMemcpyHostToDevice);
+//     // Measure GPU time
+//     cudaEvent_t start, stop;
+//     cudaEventCreate(&start);
+//     cudaEventCreate(&stop);
+//     cudaEventRecord(start);
 
     
+//     cudaMemcpy(d_arr1, arr1.data(), size1 * sizeof(Pair<int, int>), cudaMemcpyHostToDevice);
+//     cudaMemcpy(d_arr2, arr2.data(), size2 * sizeof(Pair<int, int>), cudaMemcpyHostToDevice);
 
-    Pair<int, int>* d_merged = merge(d_arr1, size1, d_arr2, size2);
+    
 
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-    std::cout << "GPU merge time: " << milliseconds / 1000.0 << " seconds" << std::endl;
+//     Pair<int, int>* d_merged = merge(d_arr1, size1, d_arr2, size2);
 
-    // Compare CPU and GPU results
-    bool isEqual = compareResults(mergedCPU, d_merged, size1 + size2);
-    std::cout << "Results match: " << (isEqual ? "Yes" : "No") << std::endl;
+//     cudaEventRecord(stop);
+//     cudaEventSynchronize(stop);
+//     float milliseconds = 0;
+//     cudaEventElapsedTime(&milliseconds, start, stop);
+//     std::cout << "GPU merge time: " << milliseconds / 1000.0 << " seconds" << std::endl;
 
-    // Cleanup
-    cudaFree(d_arr1);
-    cudaFree(d_arr2);
-    cudaFree(d_merged);
+//     // Compare CPU and GPU results
+//     bool isEqual = compareResults(mergedCPU, d_merged, size1 + size2);
+//     std::cout << "Results match: " << (isEqual ? "Yes" : "No") << std::endl;
 
-    return 0;
-}
+//     // Cleanup
+//     cudaFree(d_arr1);
+//     cudaFree(d_arr2);
+//     cudaFree(d_merged);
+
+//     return 0;
+// }

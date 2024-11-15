@@ -51,7 +51,7 @@ __host__ bool lsmTree<Key, Value>::updateKeys(const Pair<Key, Value>* kv, int ba
     
     Pair<Key, Value>* m = getMemory();
 
-    while(getNumBatches() & (1 << currentLevel)){
+    while(getNumBatches() & (1 << current_level)){
         Pair<Key, Value>* cur = getMemory() + offset;
 
         merged_size += level_size;
@@ -61,7 +61,7 @@ __host__ bool lsmTree<Key, Value>::updateKeys(const Pair<Key, Value>* kv, int ba
 
         offset += level_size;
         current_level++;
-        level_size <<= 1
+        level_size <<= 1;
     }
     
     cudaMemcpy(m + offset, d_buffer, merged_size * sizeof(Pair<Key, Value>), cudaMemcpyDeviceToDevice);

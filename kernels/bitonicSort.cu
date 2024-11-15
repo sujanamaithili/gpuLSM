@@ -156,7 +156,7 @@ void testBitonicSort() {
     cudaEventDestroy(stop);
 }
 
-int main() {
-    testBitonicSort();
-    return 0;
-}
+// int main() {
+//     testBitonicSort();
+//     return 0;
+// }

@@ -1,12 +1,23 @@
 #ifndef GPU_LSM_TREE_H
 #define GPU_LSM_TREE_H
 
+template <typename T>
+class Sentinel {
+public:
+    static T& tombstone() {
+        static T instance = T(); // Singleton instance acting as the sentinel
+        return instance;
+    }
+};
+
 template <typename Key, typename Value>
 struct Pair {
     Key first;
     Value second;
     __host__ __device__ Pair() : first(Key()), second(Value()) {}
     __host__ __device__ Pair(const Key a, const Value b) : first(a), second(b) {}
+    _host_ _device_ void setTombstone() { second = Sentinel<Value>::tombstone(); }
+    _host_ _device_ bool isTombstone() const { return &second == &Sentinel<Value>::tombstone();}
 };
 
 template <typename Key, typename Value>
