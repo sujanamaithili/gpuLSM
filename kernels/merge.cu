@@ -2,6 +2,10 @@
 #include <cuda_runtime.h>
 #include "merge.cuh"
 
+#include <vector>
+#include <algorithm>
+#include <chrono>
+
 template <typename Key, typename Value>
 __global__ void mergeKernel(Pair<Key, Value>* d_arr1, int size1, Pair<Key, Value>* d_arr2, int size2, Pair<Key, Value>* d_merged) {
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
@@ -64,6 +68,44 @@ __host__ Pair<Key, Value>* merge(Pair<Key, Value>* d_arr1, int size1, Pair<Key, 
     return d_merged;
 }
 
+template <typename Key, typename Value>
+std::vector<Pair<Key, Value>> mergeCPU(const std::vector<Pair<Key, Value>>& arr1, const std::vector<Pair<Key, Value>>& arr2) {
+    std::vector<Pair<Key, Value>> merged;
+    int i = 0, j = 0;
+    int size1 = arr1.size();
+    int size2 = arr2.size();
+
+    merged.reserve(size1 + size2);
+
+    while (i < size1 && j < size2) {
+        if (arr1[i].first <= arr2[j].first) {
+            merged.push_back(arr1[i++]);
+        } else {
+            merged.push_back(arr2[j++]);
+        }
+    }
+
+    while (i < size1) merged.push_back(arr1[i++]);
+    while (j < size2) merged.push_back(arr2[j++]);
+
+    return merged;
+}
+
+template <typename Key, typename Value>
+bool compareResults(const std::vector<Pair<Key, Value>>& cpu_result, Pair<Key, Value>* d_gpu_result, int size) {
+    // Copy GPU results back to host
+    std::vector<Pair<Key, Value>> gpu_result(size);
+    cudaMemcpy(gpu_result.data(), d_gpu_result, size * sizeof(Pair<Key, Value>), cudaMemcpyDeviceToHost);
+
+    // Compare CPU and GPU results element-wise
+    for (int i = 0; i < size; ++i) {
+        if (cpu_result[i].first != gpu_result[i].first || cpu_result[i].second != gpu_result[i].second) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // TODO: Remove after testing merge code
 
 void testMerge() {
@@ -103,7 +145,68 @@ void testMerge() {
     cudaFree(d_merged);
 }
 
-int main() {
-    testMerge();
+// int main() {
+//     testMerge();
+//     return 0;
+// }
+
+int main(int argc, char** argv) {
+    if (argc < 3) {
+        std::cerr << "Usage: " << argv[0] << " <size1> <size2>" << std::endl;
+        return 1;
+    }
+
+    int size1 = std::stoi(argv[1]);
+    int size2 = std::stoi(argv[2]);
+
+    // Generate random sorted arrays of Pair objects
+    std::vector<Pair<int, int>> arr1(size1), arr2(size2);
+    for (int i = 0; i < size1; ++i) arr1[i] = Pair<int, int>(rand() % 10000, rand() % 100);
+    for (int i = 0; i < size2; ++i) arr2[i] = Pair<int, int>(rand() % 10000, rand() % 100);
+    std::sort(arr1.begin(), arr1.end(), [](const Pair<int, int>& a, const Pair<int, int>& b) { return a.first < b.first; });
+    std::sort(arr2.begin(), arr2.end(), [](const Pair<int, int>& a, const Pair<int, int>& b) { return a.first < b.first; });
+
+    // Measure CPU time
+    auto cpu_start = std::chrono::high_resolution_clock::now();
+    std::vector<Pair<int, int>> mergedCPU = mergeCPU(arr1, arr2);
+    auto cpu_end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> cpu_duration = cpu_end - cpu_start;
+    std::cout << "CPU merge time: " << cpu_duration.count() << " seconds" << std::endl;
+
+    // Copy data to GPU
+    Pair<int, int> *d_arr1, *d_arr2;
+    cudaMalloc(&d_arr1, size1 * sizeof(Pair<int, int>));
+    cudaMalloc(&d_arr2, size2 * sizeof(Pair<int, int>));
+
+
+    // Measure GPU time
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    cudaEventRecord(start);
+
+    
+    cudaMemcpy(d_arr1, arr1.data(), size1 * sizeof(Pair<int, int>), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_arr2, arr2.data(), size2 * sizeof(Pair<int, int>), cudaMemcpyHostToDevice);
+
+    
+
+    Pair<int, int>* d_merged = merge(d_arr1, size1, d_arr2, size2);
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+    std::cout << "GPU merge time: " << milliseconds / 1000.0 << " seconds" << std::endl;
+
+    // Compare CPU and GPU results
+    bool isEqual = compareResults(mergedCPU, d_merged, size1 + size2);
+    std::cout << "Results match: " << (isEqual ? "Yes" : "No") << std::endl;
+
+    // Cleanup
+    cudaFree(d_arr1);
+    cudaFree(d_arr2);
+    cudaFree(d_merged);
+
     return 0;
 }
