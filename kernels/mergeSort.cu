@@ -1,56 +1,69 @@
-#include <iostream>
 #include <cuda.h>
+#include <cuda_runtime.h>
+#include <iostream>
 #include <cstdlib>
-#include <algorithm>
-#include <time.h>
+#include <ctime>
+#include "mergeSort.cuh"
 
-__device__ void Merge(int* arr, int* temp, long int left, long int middle, long int right) 
-{
+template <typename Key, typename Value>
+__device__ void Merge(Pair<Key, Value>* arr, Pair<Key, Value>* temp, long int left, long int middle, long int right) {
     long int i = left, j = middle, k = left;
-    while (i < middle && j < right) 
-    {
-        if (arr[i] <= arr[j])
+    while (i < middle && j < right) {
+        if (arr[i].first <= arr[j].first)
             temp[k++] = arr[i++];
         else
             temp[k++] = arr[j++];
     }
-
-    while (i < middle)
-        temp[k++] = arr[i++];
-    while (j < right)
-        temp[k++] = arr[j++];
-
-    for (long int x = left; x < right; x++)
-        arr[x] = temp[x];
+    while (i < middle) temp[k++] = arr[i++];
+    while (j < right) temp[k++] = arr[j++];
+    for (long int x = left; x < right; x++) arr[x] = temp[x];
 }
 
-__global__ void MergeSortGPU(int* arr, int* temp, long int n, long int width) 
-{
-    long int tid = threadIdx.x + blockDim.x * blockIdx.x;
+// Kernel function for merge sort
+template <typename Key, typename Value>
+__global__ void mergeSortKernel(Pair<Key, Value>* arr, Pair<Key, Value>* temp, long int n, long int width) {
+    long int tid = blockIdx.x * blockDim.x + threadIdx.x;
     long int left = tid * width;
     long int middle = min(left + width / 2, n);
     long int right = min(left + width, n);
-    if (left < n && middle < n) 
-    {
+    if (left < n && middle < n) {
         Merge(arr, temp, left, middle, right);
     }
 }
 
-void mergeSortGPU(int* d_arr, int* d_temp, long int n, int threadsPerBlock) 
-{
+// Host function for GPU merge sort with internal configuration
+template <typename Key, typename Value>
+void mergeSortGPU(Pair<Key, Value>* d_arr, long int n) {
+    const int threadsPerBlock = 256;  // Set a typical number of threads per block
     int blocksPerGrid = (n + threadsPerBlock - 1) / threadsPerBlock;
-    for (long int wid = 1; wid < n; wid *= 2) 
-    {
-        MergeSortGPU<<<blocksPerGrid, threadsPerBlock>>>(d_arr, d_temp, n, 2 * wid);
+
+    // Allocate temporary array on the GPU
+    Pair<Key, Value>* d_temp;
+    cudaMalloc(&d_temp, n * sizeof(Pair<Key, Value>));
+
+    for (long int width = 1; width < n; width *= 2) {
+        mergeSortKernel<Key, Value><<<blocksPerGrid, threadsPerBlock>>>(d_arr, d_temp, n, 2 * width);
+        cudaDeviceSynchronize();
+
+        cudaError_t err = cudaGetLastError();
+        if (err != cudaSuccess) {
+            std::cerr << "Kernel launch error: " << cudaGetErrorString(err) << std::endl;
+            cudaFree(d_temp);
+            return;
+        }
     }
+
+    // Free the temporary array
+    cudaFree(d_temp);
 }
 
-void mergeCPU(int* arr, int* temp, long int left, long int middle, long int right) 
+template <typename Key, typename Value>
+void mergeCPU(Pair<Key, Value>* arr, Pair<Key, Value>* temp, long int left, long int middle, long int right) 
 {
     long int i = left, j = middle, k = left;
     while (i < middle && j < right) 
     {
-        if (arr[i] <= arr[j])
+        if (arr[i].first <= arr[j].first)
             temp[k++] = arr[i++];
         else
             temp[k++] = arr[j++];
@@ -65,7 +78,8 @@ void mergeCPU(int* arr, int* temp, long int left, long int middle, long int righ
         arr[x] = temp[x];
 }
 
-void mergeSortCPU(int* arr, int* temp, long int left, long int right) 
+template <typename Key, typename Value>
+void mergeSortCPU(Pair<Key, Value>* arr, Pair<Key, Value>* temp, long int left, long int right) 
 {
     if (right - left <= 1)
         return;
@@ -75,56 +89,63 @@ void mergeSortCPU(int* arr, int* temp, long int left, long int right)
     mergeCPU(arr, temp, left, middle, right);
 }
 
-bool isSorted(int* arr, long int n) 
-{
-    for (long int i = 1; i < n; i++) 
-    {
-        if (arr[i - 1] > arr[i])
-            return false;
+// Function to check if the array is sorted
+template <typename Key, typename Value>
+bool isSorted(Pair<Key, Value>* arr, long int n) {
+    for (long int i = 1; i < n; i++) {
+        if (arr[i - 1].first > arr[i].first) return false;
     }
     return true;
 }
 
-int main() 
-{
-    const long int N = 1L << exponent;
-    int* arrGPU = new int[N];
-    int* arrCPU = new int[N];
-    int* temp = new int[N];
+void testMergeSort() {
+    const long int N = 1L << 20;  // 1 million elements
+    using Key = int;
+    using Value = int;
+    using DataType = Pair<Key, Value>;
 
-    for (long int i = 0; i < N; i++) 
-    {
-        int value = rand() % N;
-        arrGPU[i] = value;
-        arrCPU[i] = value;
+    // Allocate host memory
+    DataType* arrCPU = new DataType[N];
+    DataType* arrGPU = new DataType[N];
+    DataType* temp = new DataType[N];
+
+    // Initialize the arrays with random key-value pairs
+    for (long int i = 0; i < N; i++) {
+        int randomValue = rand() % N;
+        arrCPU[i] = {randomValue, (Key)i};
+        arrGPU[i] = {randomValue, (Key)i};
     }
 
-    // Allocate memory on the GPU
-    int* d_arr;
-    int* d_temp;
-    long int size = N * sizeof(int);
-    cudaMalloc(&d_arr, size);
-    cudaMalloc(&d_temp, size);
+    // Allocate device memory
+    DataType* d_arr;
+    cudaMalloc(&d_arr, N * sizeof(DataType));
 
-    // Perform GPU merge sort
-    clock_t start, end;
-    cudaMemcpy(d_arr, arrGPU, size, cudaMemcpyHostToDevice);
-    start = clock();
-    mergeSortGPU(d_arr, d_temp, N, threadsPerBlock);
-    cudaDeviceSynchronize();
-    end = clock();
-    double gpuTime = ((double)(end - start)) / CLOCKS_PER_SEC;
-    printf("Time taken in GPU = %lf s\n", gpuTime);
+    // Copy data to device
+    cudaMemcpy(d_arr, arrGPU, N * sizeof(DataType), cudaMemcpyHostToDevice);
 
-    // Copy the sorted array back to host (not timed)
-    cudaMemcpy(arrGPU, d_arr, size, cudaMemcpyDeviceToHost);
+    // Measure GPU merge sort time using CUDA events
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+    mergeSortGPU<Key, Value>(d_arr, N);
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float gpuTime;
+    cudaEventElapsedTime(&gpuTime, start, stop);
+    std::cout << "Time taken in GPU merge sort = " << gpuTime / 1000.0 << " s\n";
+
+    // Copy sorted data back to host
+    cudaMemcpy(arrGPU, d_arr, N * sizeof(DataType), cudaMemcpyDeviceToHost);
 
     // Measure CPU merge sort time
-    start = clock();
+    clock_t cpuStart = clock();
     mergeSortCPU(arrCPU, temp, 0, N);
-    end = clock();
-    double cpuTime = ((double)(end - start)) / CLOCKS_PER_SEC;
-    printf("Time taken in CPU = %lf s\n", cpuTime);
+    clock_t cpuEnd = clock();
+    double cpuTime = (double)(cpuEnd - cpuStart) / CLOCKS_PER_SEC;
+    std::cout << "Time taken in CPU merge sort = " << cpuTime << " s\n";
 
     // Verify if the arrays are sorted
     bool gpuSorted = isSorted(arrGPU, N);
@@ -132,12 +153,16 @@ int main()
     std::cout << "GPU Merge Sort: " << (gpuSorted ? "Sorted correctly" : "Not sorted correctly") << std::endl;
     std::cout << "CPU Merge Sort: " << (cpuSorted ? "Sorted correctly" : "Not sorted correctly") << std::endl;
 
-    // Clean up
+    // Clean up resources
     delete[] arrGPU;
     delete[] arrCPU;
     delete[] temp;
     cudaFree(d_arr);
-    cudaFree(d_temp);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+}
 
+int main() {
+    testMergeSort();
     return 0;
 }
