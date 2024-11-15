@@ -1,9 +1,9 @@
 # Compiler and flags
 NVCC := nvcc
-CXXFLAGS := -std=c++11 -Ikernels -Isrc
+CXXFLAGS := -std=c++11 -Ikernels -Isrc -Itest
 
 # Source files
-SRCS := src/main.cu src/lsm.cu kernels/merge.cu kernels/query.cu
+SRCS := SRCS := src/*.cu kernels/*.cu test/*.cu
 
 # Object files
 OBJS := $(SRCS:.cu=.o)
