@@ -1,8 +1,11 @@
 #include "lsm.cuh"
 #include "query.cuh"
 #include "merge.cuh"
+#include "bitonicSort.cuh"
 #include <cstdio>
 #include <cuda_runtime.h>
+
+template class lsmTree<int, int>;
 
 template <typename Key, typename Value>
 __host__ __device__ lsmTree<Key, Value>::lsmTree(int numLevels, int bufferSize) {

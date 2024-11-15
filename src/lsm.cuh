@@ -16,8 +16,8 @@ struct Pair {
     Value second;
     __host__ __device__ Pair() : first(Key()), second(Value()) {}
     __host__ __device__ Pair(const Key a, const Value b) : first(a), second(b) {}
-    _host_ _device_ void setTombstone() { second = Sentinel<Value>::tombstone(); }
-    _host_ _device_ bool isTombstone() const { return &second == &Sentinel<Value>::tombstone();}
+    __host__ __device__ void setTombstone() { second = Sentinel<Value>::tombstone(); }
+    __host__ __device__ bool isTombstone() const { return &second == &Sentinel<Value>::tombstone();}
 };
 
 template <typename Key, typename Value>
@@ -45,7 +45,7 @@ public:
 
     __host__ __device__ void printAllLevels() const;
 
-    __host__ void countKeys(const Key* k1, const Key* k2, int numQueries, int* counts)
+    __host__ void countKeys(const Key* k1, const Key* k2, int numQueries, int* counts);
 
     __host__ __device__ void incrementBatchCounter() { numBatches++; }
     __host__ __device__ int getNumBatches() const { return numBatches; }
