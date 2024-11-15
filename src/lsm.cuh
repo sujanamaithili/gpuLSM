@@ -16,13 +16,10 @@ private:
     int bufferSize; // Size of buffer
     int maxSize; // Max Size of LSM tree
     int numBatches; // No of batches pushed each of buffer size
-    Pair<Key, Value>* memory; // Array of key value pairs for all levels
-
-    __host__ void incrementBatchCounter() { numBatches++; }
-    __host__ int getNumBatches() const { return numBatches; }
-    __host__ Pair<Key, Value>* getMemory() const { return memory; }
 
 public:
+    Pair<Key, Value>* memory; // Array of key value pairs for all levels
+
     __host__ __device__ lsmTree(int numLevels, int bufferSize);
 
     __host__ __device__ ~lsmTree();
@@ -36,6 +33,16 @@ public:
     __host__ __device__ void printLevel(int level) const;
 
     __host__ __device__ void printAllLevels() const;
+
+    __host__ void countKeys(const Key* k1, const Key* k2, int numQueries, int* counts)
+
+    __host__ __device__ void incrementBatchCounter() { numBatches++; }
+    __host__ __device__ int getNumBatches() const { return numBatches; }
+    __host__ __device__ Pair<Key, Value>* getMemory() const { return memory; }
+
+    __host__ __device__ int getNumLevels() const { return numLevels; }
+    __host__ __device__ int getBufferSize() const { return bufferSize; }
+
 };
 
 #endif // GPU_LSM_TREE_H

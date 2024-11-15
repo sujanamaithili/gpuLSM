@@ -42,7 +42,7 @@ __host__ bool lsmTree<Key, Value>::updateKeys(const Pair<Key, Value>* kv, int ba
     cudaMemcpy(d_buffer, kv, batch_size * sizeof(Pair<Key, Value>), cudaMemcpyHostToDevice);
 
     
-    mergeSortGPU(d_buffer, batch_size);
+    bitonicSortGPU(d_buffer, batch_size);
     
     int offset = 0;
     int level_size = batch_size; //b
@@ -110,6 +110,8 @@ __host__ void lsmTree<Key, Value>::countKeys(const Key* k1, const Key* k2, int n
     int* d_u; 
     int* d_init_count;
 
+    int numLevels = getNumLevels();
+
     cudaMalloc(&d_l, numQueries * numLevels * sizeof(int));
     cudaMalloc(&d_u, numQueries * numLevels * sizeof(int));
     cudaMalloc(&d_init_count, numQueries * numLevels * sizeof(int));
@@ -119,14 +121,37 @@ __host__ void lsmTree<Key, Value>::countKeys(const Key* k1, const Key* k2, int n
 
     int* d_offset;
     cudaMalloc(&d_offset, numQueries * numLevels * sizeof(int));
+    int* d_maxoffset;
+    cudaMalloc(&d_offset, numQueries * sizeof(int));
 
     int threadsPerBlock = 256;
     int blocks = (numQueries + threadsPerBlock - 1) / threadsPerBlock;
-    exclusiveSum<<<blocks, threadsPerBlock>>>(d_init_count, d_offset);
+    exclusiveSum<<<blocks, threadsPerBlock>>>(d_init_count, d_offset, d_maxoffset, numQueries);
+
+    
+    int* d_maxResultSize;
+    int reductionThreads = 256;
+    int reductionBlocks = (numQueries + reductionThreads - 1) / reductionThreads;
+    reduceSum<<<reductionBlocks, reductionThreads>>>(d_maxoffset, d_maxResultSize, numQueries);
+
+    int maxResultSize;
+    cudaMemcpy(&maxResultSize, d_maxResultSize, sizeof(int), cudaMemcpyDeviceToHost);
+
+    Pair<Key, Value>* d_result;
+    cudaMalloc(&d_result, maxResultSize * sizeof(Pair<Key, Value>));
+    collectElements<<<numQueries, numLevels>>>(d_l, d_u, d_offset, d_result);
+
+    sortBySegment(d_result, d_maxoffset, numQueries);
+
+    //TODO: count from d_result for each Query
+
 
     cudaFree(d_l);
     cudaFree(d_u);
     cudaFree(d_init_count);
+    cudaFree(d_offset);
+    cudaFree(d_maxoffset);
+    cudaFree(d_result);
 }
 
 
