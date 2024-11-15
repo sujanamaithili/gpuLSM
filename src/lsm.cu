@@ -40,9 +40,10 @@ __host__ bool lsmTree<Key, Value>::updateKeys(const Pair<Key, Value>* kv, int ba
     Pair<Key, Value>* d_buffer;
     cudaMalloc(&d_buffer, batch_size * sizeof(Pair<Key, Value>));
     cudaMemcpy(d_buffer, kv, batch_size * sizeof(Pair<Key, Value>), cudaMemcpyHostToDevice);
-    cudaMalloc(&tempd_buffer, batch_size * sizeof(Pair<Key, Value>));
-    cub::DeviceRadixSort::SortPairs(tempd_buffer, batch_size, d_buffer, d_buffer, batch_size);
 
+    
+    mergeSortGPU(d_buffer, batch_size)
+    
     int offset = 0;
     int level_size = batch_size; //b
     int current_level = 0;
@@ -100,4 +101,30 @@ __host__ void lsmTree<Key, Value>::queryKeys(const Key* keys, int size, Value* r
     cudaFree(d_keys);
     cudaFree(d_results);
     cudaFree(d_foundFlags);
+}
+
+template <typename Key, typename Value>
+__host__ void lsmTree<Key, Value>::countKeys(const Key* k1, const Key* k2, int numQueries, int* counts) {
+    // lower and upper bounds index in every level of each query
+    int* d_l;                
+    int* d_u; 
+    int* d_init_count;
+
+    cudaMalloc(&d_l, numQueries * numLevels * sizeof(int));
+    cudaMalloc(&d_u, numQueries * numLevels * sizeof(int));
+    cudaMalloc(&d_init_count, numQueries * numLevels * sizeof(int));
+
+    // Launch kernel to find lower and upper bounds for each query on each level
+    findBounds<<<numQueries, numLevels>>>(d_l, d_u, k1, k2, d_init_count);
+
+    int* d_offset;
+    cudaMalloc(&d_offset, numQueries * numLevels * sizeof(int));
+
+    int threadsPerBlock = 256;
+    int blocks = (numQueries + threadsPerBlock - 1) / threadsPerBlock;
+    exclusiveSum<<<blocks, threadsPerBlock>>>(d_init_count, d_offset);
+
+    cudaFree(d_l);
+    cudaFree(d_u);
+    cudaFree(d_init_count);
 }
