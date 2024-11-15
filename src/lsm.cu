@@ -144,17 +144,23 @@ __host__ void lsmTree<Key, Value>::countKeys(const Key* k1, const Key* k2, int n
     cudaMalloc(&d_result, maxResultSize * sizeof(Pair<Key, Value>));
     collectElements<<<numQueries, numLevels>>>(d_l, d_u, d_offset, d_result);
 
-    sortBySegment(d_result, d_maxoffset, numQueries);
+    int* d_result_offset;
+    cudaMalloc(&d_offset, numQueries * sizeof(int));
+    sortBySegment(d_result, d_maxoffset, d_result_offset, numQueries);
 
-    //TODO: count from d_result for each Query
-
+    int* d_counts;
+    cudaMalloc(&d_counts, numQueries * sizeof(int));
+    count<<<blocks, threadsPerBlock>>>(d_result, d_maxoffset, d_result_offset, d_counts, numQueries);
+    cudaMemcpy(counts, d_counts, numQueries * sizeof(int), cudaMemcpyDeviceToHost);
 
     cudaFree(d_l);
     cudaFree(d_u);
     cudaFree(d_init_count);
     cudaFree(d_offset);
     cudaFree(d_maxoffset);
+    cudaFree(d_result_offset);
     cudaFree(d_result);
+    cudaFree(d_counts);
 }
 
 
