@@ -32,6 +32,10 @@ public:
     __device__ bool deleteKeys(const Key* keys, int size);
 
     __host__ void queryKeys(const Key* keys, int size, Value* results, bool* foundFlags);
+
+    __host__ __device__ void printLevel(int level) const;
+
+    __host__ __device__ void printAllLevels() const;
 };
 
 #endif // GPU_LSM_TREE_H

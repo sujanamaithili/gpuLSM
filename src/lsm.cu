@@ -42,7 +42,7 @@ __host__ bool lsmTree<Key, Value>::updateKeys(const Pair<Key, Value>* kv, int ba
     cudaMemcpy(d_buffer, kv, batch_size * sizeof(Pair<Key, Value>), cudaMemcpyHostToDevice);
 
     
-    mergeSortGPU(d_buffer, batch_size)
+    mergeSortGPU(d_buffer, batch_size);
     
     int offset = 0;
     int level_size = batch_size; //b
@@ -127,4 +127,74 @@ __host__ void lsmTree<Key, Value>::countKeys(const Key* k1, const Key* k2, int n
     cudaFree(d_l);
     cudaFree(d_u);
     cudaFree(d_init_count);
+}
+
+
+template <typename Key, typename Value>
+__host__ void lsmTree<Key, Value>::printLevel(int level) const {
+    if (level >= numLevels) {
+        printf("Error: Level %d does not exist. Tree has %d levels.\n", level, numLevels);
+        return;
+    }
+
+    // Calculate the offset and size for the specified level
+    int offset = 0;
+    int level_size = bufferSize;
+    for (int i = 0; i < level; i++) {
+        offset += level_size;
+        level_size <<= 1;  // Double the size for each level
+    }
+
+    // Create host memory to copy the level data
+    Pair<Key, Value>* h_level = new Pair<Key, Value>[level_size];
+    cudaError_t status = cudaMemcpy(h_level, memory + offset, 
+                                   level_size * sizeof(Pair<Key, Value>), 
+                                   cudaMemcpyDeviceToHost);
+    
+    if (status != cudaSuccess) {
+        printf("Error copying level data from device: %s\n", cudaGetErrorString(status));
+        delete[] h_level;
+        return;
+    }
+
+    printf("\nLevel %d (size: %d):\n", level, level_size);
+    printf("----------------------------------------\n");
+    
+    // Count non-empty pairs
+    int numEntries = 0;
+    for (int i = 0; i < level_size; i++) {
+        if (h_level[i].first != Key() || h_level[i].second != Value()) {
+            numEntries++;
+        }
+    }
+    
+    if (numEntries == 0) {
+        printf("Empty level\n");
+    } else {
+        printf("Index\tKey\tValue\n");
+        for (int i = 0; i < level_size; i++) {
+            if (h_level[i].first != Key() || h_level[i].second != Value()) {
+                printf("%d\t%d\t%d\n", i, h_level[i].first, h_level[i].second);
+            }
+        }
+    }
+    
+    printf("Total entries: %d/%d\n", numEntries, level_size);
+    printf("----------------------------------------\n");
+
+    delete[] h_level;
+}
+
+template <typename Key, typename Value>
+__host__ void lsmTree<Key, Value>::printAllLevels() const {
+    printf("\nLSM Tree Structure:\n");
+    printf("==================\n");
+    printf("Number of levels: %d\n", numLevels);
+    printf("Buffer size: %d\n", bufferSize);
+    printf("Number of batches processed: %d\n", numBatches);
+    printf("==================\n");
+
+    for (int i = 0; i < numLevels; i++) {
+        printLevel(i);
+    }
 }
