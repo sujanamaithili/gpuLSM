@@ -1,7 +1,8 @@
 #include <cuda_runtime.h>
 
-#include "lsm.cuh"
+#include "collectElements.cuh"
 
+template <typename Key, typename Value>
 __global__ void collectElements(const int* d_l, const int* d_u, const int* d_offset, Pair<Key, Value>* d_result) {
     int queryId = blockIdx.x;
     int level = threadIdx.x;

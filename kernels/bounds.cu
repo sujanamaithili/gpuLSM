@@ -1,6 +1,6 @@
 #include <cuda_runtime.h>
 
-#include "lsm.cuh"
+#include "bounds.cuh"
 
 template <typename Key, typename Value>
 __device__ int lowerBound(int level, Key key) {

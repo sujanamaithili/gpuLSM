@@ -1,6 +1,6 @@
 #include <cuda_runtime.h>
 
-#include "lsm.cuh"
+#include "exclusiveSum.cuh"
 
 __global__ void exclusiveSum(const int* d_init_count, int* d_offset, int* d_maxoffset, int numQueries) {
     

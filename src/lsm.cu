@@ -2,6 +2,12 @@
 #include "query.cuh"
 #include "merge.cuh"
 #include "bitonicSort.cuh"
+#include "reduceSum.cuh"
+#include "bounds.cuh"
+#include "collectElements.cuh"
+#include "compact.cuh"
+#include "count.cuh"
+#include "exclusiveSum.cuh"
 #include <cstdio>
 #include <cuda.h>
 
