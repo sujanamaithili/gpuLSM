@@ -12,7 +12,7 @@ __host__ __device__ lsmTree<Key, Value>::lsmTree(int numLevels, int bufferSize) 
     this->numLevels = numLevels;
     this->bufferSize = bufferSize;
     this->maxSize = 0;
-
+    this->numBatches = 0;
     // Calculate maxSize based on the number of levels and buffer size.
     for (int i = 0; i < numLevels; ++i) {
         this->maxSize += (bufferSize << i);
@@ -105,6 +105,46 @@ __host__ void lsmTree<Key, Value>::queryKeys(const Key* keys, int size, Value* r
     cudaFree(d_foundFlags);
 }
 
+template <typename Key, typename Value>
+__host__ bool lsmTree<Key, Value>::deleteKeys(const Key* keys, int batch_size)
+{
+
+    Pair<Key, Value>* h_buffer = new Pair<Key, Value>[batch_size];
+    for (int i = 0; i < batch_size; ++i) {
+        h_buffer[i] = Pair<Key, Value>(keys[i], Sentinel<Value>::tombstone());
+    }
+    Pair<Key, Value>* d_buffer;
+    cudaMalloc(&d_buffer, batch_size * sizeof(Pair<Key, Value>));
+    cudaMemcpy(d_buffer, h_buffer, batch_size * sizeof(Pair<Key, Value>), cudaMemcpyHostToDevice);
+
+    bitonicSortGPU(d_buffer, batch_size);
+
+    int offset = 0;
+    int level_size = batch_size;
+    int current_level = 0;
+    int merged_size = batch_size;
+
+    Pair<Key, Value>* m = getMemory();
+
+    while (getNumBatches() & (1 << current_level)) {
+        Pair<Key, Value>* cur = getMemory() + offset;
+
+        merged_size += level_size;
+
+        d_buffer = merge(m + offset, level_size, d_buffer, level_size);
+        cudaMemset(cur, 0, level_size * sizeof(Pair<Key, Value>));
+
+        offset += level_size;
+        current_level++;
+        level_size <<= 1;
+    }
+
+    cudaMemcpy(m + offset, d_buffer, merged_size * sizeof(Pair<Key, Value>), cudaMemcpyDeviceToDevice);
+    incrementBatchCounter();
+    delete[] h_buffer;
+    cudaFree(d_buffer);
+    return true;
+}
 
 template <typename Key, typename Value>
 __host__ void lsmTree<Key, Value>::countKeys(const Key* k1, const Key* k2, int numQueries, int* counts) {

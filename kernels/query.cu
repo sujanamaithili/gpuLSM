@@ -23,7 +23,7 @@ __device__ bool binarySearchFirstOccurrence(const Pair<Key, Value>* data, int si
         }
     }
 
-    if (resultIndex != -1) {
+    if (resultIndex != -1 && !data[resultIndex].isTombstone()) {
         value = data[resultIndex].second;
         return true;
     } else {
