@@ -2,30 +2,26 @@
 #include <lsm.cuh>
 
 void runTestWithUniqueKeys() {
-    // Define the data types for the key and value
     using Key = int;
     using Value = int;
-
-    // Parameters for the LSM tree
     const int numLevels = 4;
     const int bufferSize = 32;
 
-    // Create an instance of the LSM tree
     lsmTree<Key, Value> tree(numLevels, bufferSize);
 
-    // Define 96 key-value pairs for insertion
     const int totalPairs = 96;
     Pair<Key, Value> kvPairs[totalPairs];
     for (int i = 0; i < totalPairs; ++i) {
-        kvPairs[i] = {totalPairs - (i + 1), (totalPairs - (i + 1)) * 10};
+        kvPairs[i] = Pair<Key, Value>(
+            std::make_optional(totalPairs - (i + 1)),
+            std::make_optional((totalPairs - (i + 1)) * 10)
+        );
     }
 
-    // Randomize the key-value pairs
     std::random_device rd;
     std::mt19937 gen(rd());
     std::shuffle(std::begin(kvPairs), std::end(kvPairs), gen);
 
-    // Insert in batches of 32 key-value pairs
     const int batchSize = 32;
     for (int i = 0; i < totalPairs; i += batchSize) {
         if (!tree.updateKeys(kvPairs + i, batchSize)) {
@@ -35,7 +31,6 @@ void runTestWithUniqueKeys() {
         printf("Successfully inserted batch starting at index %d.\n", i);
     }
 
-    // Query the LSM tree
     printf("\nTesting correctness of unique key-value pairs:\n");
     int numCorrect = 0;
     bool foundFlags[totalPairs];
@@ -43,17 +38,19 @@ void runTestWithUniqueKeys() {
     Key keysToQuery[totalPairs];
 
     for (int i = 0; i < totalPairs; ++i) {
-        keysToQuery[i] = kvPairs[i].first;
+        keysToQuery[i] = *kvPairs[i].first;
     }
 
     tree.queryKeys(keysToQuery, totalPairs, results, foundFlags);
 
-    // Verify results
     for (int i = 0; i < totalPairs; ++i) {
-        if (foundFlags[i] && results[i] == kvPairs[i].second) {
+        if (foundFlags[i] && results[i] == *kvPairs[i].second) {
             numCorrect++;
         } else {
-            printf("Error: Key %d expected value %d but got %d.\n", keysToQuery[i], kvPairs[i].second, results[i]);
+            printf("Error: Key %d expected value %d but got %d.\n", 
+                   keysToQuery[i], 
+                   *kvPairs[i].second, 
+                   results[i]);
         }
     }
 
@@ -66,26 +63,23 @@ void runTestWithUniqueKeys() {
 }
 
 void runTestWithDuplicateKeys() {
-    // Define the data types for the key and value
     using Key = int;
     using Value = int;
-
-    // Parameters for the LSM tree
     const int numLevels = 4;
     const int bufferSize = 32;
 
-    // Create an instance of the LSM tree
     lsmTree<Key, Value> tree(numLevels, bufferSize);
 
-    // Define key-value pairs with duplicate keys
     const int totalPairs = 96;
     Pair<Key, Value> kvPairs[totalPairs];
     for (int i = 0; i < totalPairs; ++i) {
-        int key = (i % 32) + 1; // Duplicate keys in the range [1, 32]
-        kvPairs[i] = {key, (i + 1) * 100}; // New value for each duplicate key
+        int key = (i % 32) + 1;
+        kvPairs[i] = Pair<Key, Value>(
+            std::make_optional(key),
+            std::make_optional((i + 1) * 100)
+        );
     }
 
-    // Insert in batches of 32 key-value pairs
     const int batchSize = 32;
     for (int i = 0; i < totalPairs; i += batchSize) {
         if (!tree.updateKeys(kvPairs + i, batchSize)) {
@@ -95,27 +89,27 @@ void runTestWithDuplicateKeys() {
         printf("Successfully inserted batch starting at index %d.\n", i);
     }
 
-    // Query the LSM tree
     printf("\nTesting correctness with duplicate key-value pairs:\n");
     int numCorrect = 0;
     bool foundFlags[32];
     Value results[32];
     Key keysToQuery[32];
 
-    // Query only for the keys in the range [1, 32]
     for (int i = 0; i < 32; ++i) {
         keysToQuery[i] = i + 1;
     }
 
     tree.queryKeys(keysToQuery, 32, results, foundFlags);
 
-    // Verify that each key returns the last inserted value
     for (int i = 0; i < 32; ++i) {
-        Value expectedValue = (i + 64 + 1) * 100; // Last inserted value for each key
+        Value expectedValue = (i + 64 + 1) * 100;
         if (foundFlags[i] && results[i] == expectedValue) {
             numCorrect++;
         } else {
-            printf("Error: Key %d expected value %d but got %d.\n", keysToQuery[i], expectedValue, results[i]);
+            printf("Error: Key %d expected value %d but got %d.\n", 
+                   keysToQuery[i], 
+                   expectedValue, 
+                   results[i]);
         }
     }
 
@@ -126,26 +120,24 @@ void runTestWithDuplicateKeys() {
         printf("Test failed: Some duplicate key-value pairs did not return the last inserted value.\n");
     }
 }
+
 void runTestWithDeletedKeys() {
-    // Define the data types for the key and value
     using Key = int;
     using Value = int;
-
-    // Parameters for the LSM tree
     const int numLevels = 4;
     const int bufferSize = 32;
 
-    // Create an instance of the LSM tree
     lsmTree<Key, Value> tree(numLevels, bufferSize);
 
-    // Define 96 key-value pairs for insertion
     const int totalPairs = 96;
     Pair<Key, Value> kvPairs[totalPairs];
     for (int i = 0; i < totalPairs; ++i) {
-        kvPairs[i] = {i + 1, (i + 1) * 10};
+        kvPairs[i] = Pair<Key, Value>(
+            std::make_optional(i + 1),
+            std::make_optional((i + 1) * 10)
+        );
     }
 
-    // Insert in batches of 32 key-value pairs
     const int batchSize = 32;
     for (int i = 0; i < totalPairs; i += batchSize) {
         if (!tree.updateKeys(kvPairs + i, batchSize)) {
@@ -155,45 +147,52 @@ void runTestWithDeletedKeys() {
         printf("Successfully inserted batch starting at index %d.\n", i);
     }
 
-    // Define keys to delete
     const int numKeysToDelete = 32;
-    Key keysToDelete[numKeysToDelete];
+    Pair<Key, Value> keysToDelete[numKeysToDelete];
     for (int i = 0; i < numKeysToDelete; ++i) {
-        keysToDelete[i] = (i + 1) * 2; // Delete even keys [2, 4, 6, ..., 32]
+        keysToDelete[i] = Pair<Key, Value>(
+            std::make_optional((i + 1) * 2),
+            std::nullopt  // Tombstone value
+        );
     }
 
-    // Delete the specified keys
-    if (!tree.deleteKeys(keysToDelete, numKeysToDelete)) {
+    if (!tree.updateKeys(keysToDelete, numKeysToDelete)) {
         printf("Error: Deletion failed for keys.\n");
         return;
     }
     printf("Successfully deleted %d keys.\n", numKeysToDelete);
     tree.printAllLevels();
-    // Query the LSM tree to check the deleted keys
+
     printf("\nTesting correctness of deleted key queries:\n");
     int numCorrect = 0;
     bool foundFlags[numKeysToDelete];
     Value results[numKeysToDelete];
+    Key queryKeys[numKeysToDelete];
 
-    tree.queryKeys(keysToDelete, numKeysToDelete, results, foundFlags);
-
-    // Verify that deleted keys return a tombstone value
     for (int i = 0; i < numKeysToDelete; ++i) {
-        if (!foundFlags[i] || results[i] == Sentinel<Value>::tombstone()) {
+        queryKeys[i] = *keysToDelete[i].first;
+    }
+
+    tree.queryKeys(queryKeys, numKeysToDelete, results, foundFlags);
+
+    for (int i = 0; i < numKeysToDelete; ++i) {
+        if (!foundFlags[i]) {
             numCorrect++;
         } else {
-            printf("Error: Key %d expected tombstone but got value %d.\n", keysToDelete[i], results[i]);
+            printf("Error: Deleted key %d was found with value %d.\n", 
+                   queryKeys[i], 
+                   results[i]);
         }
     }
 
     printf("\nCorrectly handled %d out of %d deleted keys.\n", numCorrect, numKeysToDelete);
     if (numCorrect == numKeysToDelete) {
-        printf("Test passed: All deleted keys were correctly identified as tombstoned.\n");
+        printf("Test passed: All deleted keys were correctly identified.\n");
     } else {
-        printf("Test failed: Some deleted keys were not correctly identified as tombstoned.\n");
+        printf("Test failed: Some deleted keys were not correctly identified.\n");
     }
 
-    // Verify that non-deleted keys still return correct values
+    // Test non-deleted keys
     printf("\nTesting correctness of non-deleted key queries:\n");
     numCorrect = 0;
     const int numNonDeletedKeys = 32;
@@ -203,22 +202,26 @@ void runTestWithDeletedKeys() {
     Value resultsNonDeleted[numNonDeletedKeys];
 
     for (int i = 0; i < numNonDeletedKeys; ++i) {
-        nonDeletedKeys[i] = (i * 2) + 1; // Query odd keys [1, 3, 5, ..., 31]
+        nonDeletedKeys[i] = (i * 2) + 1;
         expectedValues[i] = nonDeletedKeys[i] * 10;
     }
 
     tree.queryKeys(nonDeletedKeys, numNonDeletedKeys, resultsNonDeleted, foundFlagsNonDeleted);
 
-    // Verify results for non-deleted keys
     for (int i = 0; i < numNonDeletedKeys; ++i) {
         if (foundFlagsNonDeleted[i] && resultsNonDeleted[i] == expectedValues[i]) {
             numCorrect++;
         } else {
-            printf("Error: Key %d expected value %d but got %d.\n", nonDeletedKeys[i], expectedValues[i], resultsNonDeleted[i]);
+            printf("Error: Key %d expected value %d but got %d.\n", 
+                   nonDeletedKeys[i], 
+                   expectedValues[i], 
+                   resultsNonDeleted[i]);
         }
     }
 
-    printf("\nCorrectly retrieved %d out of %d non-deleted key-value pairs.\n", numCorrect, numNonDeletedKeys);
+    printf("\nCorrectly retrieved %d out of %d non-deleted key-value pairs.\n", 
+           numCorrect, 
+           numNonDeletedKeys);
     if (numCorrect == numNonDeletedKeys) {
         printf("Test passed: All non-deleted key-value pairs were correctly retrieved.\n");
     } else {
@@ -238,4 +241,3 @@ int main() {
 
     return 0;
 }
-

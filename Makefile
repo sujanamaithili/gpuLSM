@@ -1,9 +1,9 @@
 # Compiler and flags
 NVCC := nvcc
-CXXFLAGS := -std=c++11 -Ikernels -Isrc
+CXXFLAGS := -w -Ikernels -Isrc --expt-relaxed-constexpr
 
 # Source files
-SRCS := src/lsm.cu kernels/query.cu kernels/merge.cu kernels/bitonicSort.cu src/main.cu
+SRCS := src/lsm.cu kernels/initialize.cu kernels/query.cu kernels/merge.cu kernels/bitonicSort.cu src/main.cu
 
 # Object files
 OBJS := $(SRCS:.cu=.o)

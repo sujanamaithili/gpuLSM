@@ -1,20 +1,15 @@
 #include "lsm.cuh"
 #include "query.cuh"
 #include "merge.cuh"
+#include "initialize.cuh"
 #include "bitonicSort.cuh"
-#include "reduceSum.cuh"
-#include "bounds.cuh"
-#include "collectElements.cuh"
-#include "compact.cuh"
-#include "count.cuh"
-#include "exclusiveSum.cuh"
 #include <cstdio>
 #include <cuda.h>
 
 template class lsmTree<int, int>;
 
 template <typename Key, typename Value>
-__host__ __device__ lsmTree<Key, Value>::lsmTree(int numLevels, int bufferSize) {
+__host__ lsmTree<Key, Value>::lsmTree(int numLevels, int bufferSize) {
     this->numLevels = numLevels;
     this->bufferSize = bufferSize;
     this->maxSize = 0;
@@ -33,10 +28,12 @@ __host__ __device__ lsmTree<Key, Value>::lsmTree(int numLevels, int bufferSize) 
         exit(1);
         #endif
     }
+    initializeMemory<<<(maxSize + 255) / 256, 256>>>(memory, maxSize);
+    cudaDeviceSynchronize();
 }
 
 template <typename Key, typename Value>
-__host__ __device__ lsmTree<Key, Value>::~lsmTree() {
+__host__ lsmTree<Key, Value>::~lsmTree() {
     if (memory != nullptr) {
         cudaFree(memory);
     }
@@ -65,7 +62,7 @@ __host__ bool lsmTree<Key, Value>::updateKeys(const Pair<Key, Value>* kv, int ba
 
         merged_size += level_size;
 
-        d_buffer = merge(d_buffer, level_size, m + offset, level_size);
+        d_buffer = merge(m + offset, level_size, d_buffer, level_size);
         cudaMemset(cur, 0, level_size * sizeof(Pair<Key, Value>));
 
         offset += level_size;
@@ -117,7 +114,7 @@ __host__ bool lsmTree<Key, Value>::deleteKeys(const Key* keys, int batch_size)
 
     Pair<Key, Value>* h_buffer = new Pair<Key, Value>[batch_size];
     for (int i = 0; i < batch_size; ++i) {
-        h_buffer[i] = Pair<Key, Value>(keys[i], Sentinel<Value>::tombstone());
+        h_buffer[i] = Pair<Key, Value>(keys[i], std::nullopt);
     }
     Pair<Key, Value>* d_buffer;
     cudaMalloc(&d_buffer, batch_size * sizeof(Pair<Key, Value>));
@@ -137,7 +134,7 @@ __host__ bool lsmTree<Key, Value>::deleteKeys(const Key* keys, int batch_size)
 
         merged_size += level_size;
 
-        d_buffer = merge(d_buffer, level_size, m + offset, level_size);
+        d_buffer = merge(m + offset, level_size, d_buffer, level_size);
         cudaMemset(cur, 0, level_size * sizeof(Pair<Key, Value>));
 
         offset += level_size;
@@ -171,7 +168,7 @@ __host__ void lsmTree<Key, Value>::countKeys(const Key* k1, const Key* k2, int n
     int* d_offset;
     cudaMalloc(&d_offset, numQueries * numLevels * sizeof(int));
     int* d_maxoffset;
-    cudaMalloc(&d_maxoffset, numQueries * sizeof(int));
+    cudaMalloc(&d_offset, numQueries * sizeof(int));
 
     int threadsPerBlock = 256;
     int blocks = (numQueries + threadsPerBlock - 1) / threadsPerBlock;
@@ -191,7 +188,7 @@ __host__ void lsmTree<Key, Value>::countKeys(const Key* k1, const Key* k2, int n
     collectElements<<<numQueries, numLevels>>>(d_l, d_u, d_offset, d_result);
 
     int* d_result_offset;
-    cudaMalloc(&d_result_offset, numQueries * sizeof(int));
+    cudaMalloc(&d_offset, numQueries * sizeof(int));
     sortBySegment(d_result, d_maxoffset, d_result_offset, numQueries);
 
     int* d_counts;
@@ -207,69 +204,6 @@ __host__ void lsmTree<Key, Value>::countKeys(const Key* k1, const Key* k2, int n
     cudaFree(d_result_offset);
     cudaFree(d_result);
     cudaFree(d_counts);
-}
-
-template <typename Key, typename Value>
-__host__ void lsmTree<Key, Value>::rangeKeys(const Key* k1, const Key* k2, int numQueries, Pair<Key, Value>* range, int* counts, int* range_offset) {
-    // lower and upper bounds index in every level of each query
-    int* d_l;                
-    int* d_u; 
-    int* d_init_count;
-
-    int numLevels = getNumLevels();
-
-    cudaMalloc(&d_l, numQueries * numLevels * sizeof(int));
-    cudaMalloc(&d_u, numQueries * numLevels * sizeof(int));
-    cudaMalloc(&d_init_count, numQueries * numLevels * sizeof(int));
-
-    // Launch kernel to find lower and upper bounds for each query on each level
-    findBounds<<<numQueries, numLevels>>>(d_l, d_u, k1, k2, d_init_count);
-
-    int* d_offset;
-    cudaMalloc(&d_offset, numQueries * numLevels * sizeof(int));
-    int* d_maxoffset;
-    cudaMalloc(&d_maxoffset, numQueries * sizeof(int));
-
-    int threadsPerBlock = 256;
-    int blocks = (numQueries + threadsPerBlock - 1) / threadsPerBlock;
-    exclusiveSum<<<blocks, threadsPerBlock>>>(d_init_count, d_offset, d_maxoffset, numQueries);
-
-    
-    int* d_maxResultSize;
-    int reductionThreads = 256;
-    int reductionBlocks = (numQueries + reductionThreads - 1) / reductionThreads;
-    reduceSum<<<reductionBlocks, reductionThreads>>>(d_maxoffset, d_maxResultSize, numQueries);
-
-    int maxResultSize;
-    cudaMemcpy(&maxResultSize, d_maxResultSize, sizeof(int), cudaMemcpyDeviceToHost);
-
-    Pair<Key, Value>* d_result;
-    cudaMalloc(&d_result, maxResultSize * sizeof(Pair<Key, Value>));
-    collectElements<<<numQueries, numLevels>>>(d_l, d_u, d_offset, d_result);
-
-    int* d_result_offset;
-    cudaMalloc(&d_result_offset, numQueries * sizeof(int));
-    sortBySegment(d_result, d_maxoffset, d_result_offset, numQueries);
-
-    int* d_counts;
-    cudaMalloc(&d_counts, numQueries * sizeof(int));
-    Pair<Key, Value>* d_range;
-    cudaMalloc(&d_range, maxResultSize * sizeof(Pair<Key, Value>));
-    compact<<<blocks, threadsPerBlock>>>(d_result, d_maxoffset, d_result_offset, d_range, d_counts, numQueries);
-    
-    cudaMemcpy(range, d_range, maxResultSize * sizeof(Pair<Key, Value>), cudaMemcpyDeviceToHost);
-    cudaMemcpy(counts, d_counts, numQueries * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(range_offset, d_result_offset, numQueries * sizeof(int), cudaMemcpyDeviceToHost);
-    
-    cudaFree(d_l);
-    cudaFree(d_u);
-    cudaFree(d_init_count);
-    cudaFree(d_offset);
-    cudaFree(d_maxoffset);
-    cudaFree(d_result_offset);
-    cudaFree(d_result);
-    cudaFree(d_counts);
-    cudaFree(d_range);
 }
 
 
@@ -290,10 +224,10 @@ __host__ void lsmTree<Key, Value>::printLevel(int level) const {
 
     // Create host memory to copy the level data
     Pair<Key, Value>* h_level = new Pair<Key, Value>[level_size];
-    cudaError_t status = cudaMemcpy(h_level, memory + offset, 
-                                   level_size * sizeof(Pair<Key, Value>), 
-                                   cudaMemcpyDeviceToHost);
-    
+    cudaError_t status = cudaMemcpy(h_level, memory + offset,
+                                level_size * sizeof(Pair<Key, Value>),
+                                cudaMemcpyDeviceToHost);
+
     if (status != cudaSuccess) {
         printf("Error copying level data from device: %s\n", cudaGetErrorString(status));
         delete[] h_level;
@@ -302,26 +236,31 @@ __host__ void lsmTree<Key, Value>::printLevel(int level) const {
 
     printf("\nLevel %d (size: %d):\n", level, level_size);
     printf("----------------------------------------\n");
-    
-    // Count non-empty pairs
+
+    // Count valid entries (entries with non-empty keys)
     int numEntries = 0;
     for (int i = 0; i < level_size; i++) {
-        if (h_level[i].first != Key() || h_level[i].second != Value()) {
+        if (h_level[i].first.has_value()) {
             numEntries++;
         }
     }
-    
+
     if (numEntries == 0) {
         printf("Empty level\n");
     } else {
         printf("Index\tKey\tValue\n");
         for (int i = 0; i < level_size; i++) {
-            if (h_level[i].first != Key() || h_level[i].second != Value()) {
-                printf("%d\t%d\t%d\n", i, h_level[i].first, h_level[i].second);
+            if (h_level[i].first.has_value()) {
+                printf("%d\t%d\t", i, *(h_level[i].first));
+                if (h_level[i].second.has_value()) {
+                    printf("%d\n", *(h_level[i].second));
+                } else {
+                    printf("tombstone\n");
+                }
             }
         }
     }
-    
+
     printf("Total entries: %d/%d\n", numEntries, level_size);
     printf("----------------------------------------\n");
 
@@ -341,3 +280,4 @@ __host__ void lsmTree<Key, Value>::printAllLevels() const {
         printLevel(i);
     }
 }
+

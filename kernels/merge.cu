@@ -135,7 +135,11 @@ void testMerge() {
     // Print the merged array
     std::cout << "Merged array:\n";
     for (int i = 0; i < size1 + size2; i++) {
-        std::cout << "(" << h_merged[i].first << ", " << h_merged[i].second << ") ";
+       std::cout << "(" 
+          << (h_merged[i].first.has_value() ? std::to_string(h_merged[i].first.value()) : "nullopt")
+          << ", " 
+          << (h_merged[i].second.has_value() ? std::to_string(h_merged[i].second.value()) : "nullopt")
+          << ") ";
     }
     std::cout << std::endl;
 
