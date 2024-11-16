@@ -39,7 +39,7 @@ __global__ void mergeKernel(Pair<Key, Value>* d_arr1, int size1, Pair<Key, Value
         int mid1 = min(size1 - start1, k / 2);
         int mid2 = min(size2 - start2, k / 2);
 
-        if (d_arr1[start1 + mid1 - 1].first < d_arr2[start2 + mid2 - 1].first) {
+        if (d_arr1[start1 + mid1 - 1].first <= d_arr2[start2 + mid2 - 1].first) {
             // Discard the first 'mid1' elements of d_arr1
             start1 += mid1;
             k -= mid1;
