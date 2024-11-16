@@ -47,6 +47,8 @@ public:
 
     __host__ void countKeys(const Key* k1, const Key* k2, int numQueries, int* counts);
 
+    __host__ void rangeKeys(const Key* k1, const Key* k2, int numQueries, Pair<Key, Value>* range, int* counts,  int* range_offset);
+
     __host__ __device__ void incrementBatchCounter() { numBatches++; }
     __host__ __device__ int getNumBatches() const { return numBatches; }
     __host__ __device__ Pair<Key, Value>* getMemory() const { return memory; }
