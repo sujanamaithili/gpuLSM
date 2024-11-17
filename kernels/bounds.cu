@@ -72,5 +72,5 @@ __global__ void findBounds(int* d_l, int* d_u, const Key* k1, const Key* k2, int
 
 }
 
-template __global__ void findBounds<int, int>( int*, int*, const Key*, const Key*, int*, int, Pair<int, int>*, int);
+template __global__ void findBounds<int, int>( int*, int*, const int*, const int*, int*, int, Pair<int, int>*, int);
 

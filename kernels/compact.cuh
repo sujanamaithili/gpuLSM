@@ -4,6 +4,6 @@
 #include "lsm.cuh"
 
 template <typename Key, typename Value>
-void compact(const Pair<Key, Value>* d_result, const int* d_maxoffset, const int* d_result_offset, Pair<Key, Value>* d_range, int* d_counts, int numQueries);
+__global__ void compact(const Pair<Key, Value>* d_result, const int* d_maxoffset, const int* d_result_offset, Pair<Key, Value>* d_range, int* d_counts, int numQueries);
 
 #endif

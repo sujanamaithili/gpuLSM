@@ -169,6 +169,7 @@ void testBitonicSort() {
     cudaEventDestroy(stop);
 }
 
+template void sortBySegment<int, int>(Pair<int, int>* , int* , int* , int);
 // int main() {
 //     testBitonicSort();
 //     return 0;
