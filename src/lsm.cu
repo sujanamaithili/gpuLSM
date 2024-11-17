@@ -3,6 +3,7 @@
 #include "merge.cuh"
 #include "initialize.cuh"
 #include "bitonicSort.cuh"
+#include "mergeSort.cuh"
 #include "reduceSum.cuh"
 #include "bounds.cuh"
 #include "collectElements.cuh"
@@ -186,6 +187,7 @@ __host__ void lsmTree<Key, Value>::countKeys(const Key* k1, const Key* k2, int n
 
     
     int* d_maxResultSize;
+    cudaMalloc(&d_maxResultSize, sizeof(int));
     int reductionThreads = 256;
     int reductionBlocks = (numQueries + reductionThreads - 1) / reductionThreads;
     reduceSum<<<reductionBlocks, reductionThreads>>>(d_maxoffset, d_maxResultSize, numQueries);
@@ -239,6 +241,7 @@ __host__ void lsmTree<Key, Value>::rangeKeys(const Key* k1, const Key* k2, int n
     exclusiveSum<<<blocks, threadsPerBlock>>>(d_init_count, d_offset, d_maxoffset, numQueries, numLevels);
     
     int* d_maxResultSize;
+    cudaMalloc(&d_maxResultSize, sizeof(int));
     int reductionThreads = 256;
     int reductionBlocks = (numQueries + reductionThreads - 1) / reductionThreads;
     reduceSum<<<reductionBlocks, reductionThreads>>>(d_maxoffset, d_maxResultSize, numQueries);

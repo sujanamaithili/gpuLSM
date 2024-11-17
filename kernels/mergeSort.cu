@@ -89,6 +89,23 @@ void mergeSortCPU(Pair<Key, Value>* arr, Pair<Key, Value>* temp, long int left, 
     mergeCPU(arr, temp, left, middle, right);
 }
 
+template <typename Key, typename Value>
+void sortBySegment(Pair<Key, Value>* d_result, int* d_maxoffset, int* d_result_offset, int numQueries) {
+    std::vector<int> h_maxoffset(numQueries);
+    cudaMemcpy(h_maxoffset.data(), d_maxoffset, numQueries * sizeof(int), cudaMemcpyDeviceToHost);
+
+    int offset = 0;
+    for(int i=0; i < numQueries; i++){
+        int segmentLength = h_maxoffset[i];;
+        
+        mergeSortGPU(d_result + offset, segmentLength);
+
+        d_result_offset[i] = offset;
+
+        offset += segmentLength;
+    }
+}
+
 // Function to check if the array is sorted
 template <typename Key, typename Value>
 bool isSorted(Pair<Key, Value>* arr, long int n) {
@@ -162,6 +179,7 @@ void testMergeSort() {
     cudaEventDestroy(stop);
 }
 
+template void sortBySegment<int, int>(Pair<int, int>* , int* , int* , int);
 // int main() {
 //     testMergeSort();
 //     return 0;

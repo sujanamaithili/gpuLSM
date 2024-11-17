@@ -83,23 +83,6 @@ void bitonicSortCPU(Pair<Key, Value>* arr, long int n) {
 }
 
 template <typename Key, typename Value>
-void sortBySegment(Pair<Key, Value>* d_result, int* d_maxoffset, int* d_result_offset, int numQueries) {
-    std::vector<int> h_maxoffset(numQueries);
-    cudaMemcpy(h_maxoffset.data(), d_maxoffset, numQueries * sizeof(int), cudaMemcpyDeviceToHost);
-
-    int offset = 0;
-    for(int i=0; i < numQueries; i++){
-        int segmentLength = h_maxoffset[i];;
-        
-        bitonicSortGPU(d_result + offset, segmentLength);
-
-        d_result_offset[i] = offset;
-
-        offset += segmentLength;
-    }
-}
-
-template <typename Key, typename Value>
 bool isSorted(Pair<Key, Value>* arr, long int n) {
     for (long int i = 1; i < n; i++) {
         if (arr[i - 1].first > arr[i].first) return false;
@@ -169,7 +152,6 @@ void testBitonicSort() {
     cudaEventDestroy(stop);
 }
 
-template void sortBySegment<int, int>(Pair<int, int>* , int* , int* , int);
 // int main() {
 //     testBitonicSort();
 //     return 0;
