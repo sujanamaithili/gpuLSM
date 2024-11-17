@@ -93,10 +93,11 @@ __host__ void lsmTree<Key, Value>::queryKeys(const Key* keys, int size, Value* r
     Pair<Key, Value>* d_memory = getMemory();
     int num_levels = getNumLevels();
     int buffer_size = getBufferSize();
+    int num_batches = getNumBatches();
 
     int threadsPerBlock = 256;
     int blocksPerGrid = (size + threadsPerBlock - 1) / threadsPerBlock;
-    queryKeysKernel<<<blocksPerGrid, threadsPerBlock>>>(d_keys, d_results, d_foundFlags, size, d_memory, num_levels, buffer_size);
+    queryKeysKernel<<<blocksPerGrid, threadsPerBlock>>>(d_keys, d_results, d_foundFlags, size, d_memory, num_levels, buffer_size, num_batches);
 
     // Copy results back to host
     cudaMemcpy(results, d_results, size * sizeof(Value), cudaMemcpyDeviceToHost);

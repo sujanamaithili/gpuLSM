@@ -38,7 +38,7 @@ __device__ bool binarySearchFirstOccurrence(const Pair<Key, Value>* data, int si
 }
 
 template <typename Key, typename Value>
-__global__ void queryKeysKernel(const Key* d_keys, Value* d_results, bool* d_foundFlags, int size, const Pair<Key, Value>* d_memory, int num_levels, int buffer_size) {
+__global__ void queryKeysKernel(const Key* d_keys, Value* d_results, bool* d_foundFlags, int size, const Pair<Key, Value>* d_memory, int num_levels, int buffer_size, int num_batches) {
     
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -51,6 +51,12 @@ __global__ void queryKeysKernel(const Key* d_keys, Value* d_results, bool* d_fou
 
     // Search through each level
     for (int level = 0; level < num_levels && !found; ++level) {
+        
+        if (!(num_batches & (1 << level))) {
+            offset += buffer_size << level; 
+            continue;
+        }
+
         const int level_size = buffer_size << level;
         const Pair<Key, Value>* level_data = d_memory + offset;   
         if (binarySearchFirstOccurrence(level_data, level_size, key, value)) {
