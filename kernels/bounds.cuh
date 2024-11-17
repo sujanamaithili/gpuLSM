@@ -3,7 +3,7 @@
 
 #include "lsm.cuh"
 
-template <typename Key>
+template <typename Key, typename Value>
 __global__ void findBounds(int* d_l, int* d_u, const Key* k1, const Key* k2, int* d_init_count, int bufferSize, Pair<Key, Value>* m, int numLevels);
 
 template <typename Key, typename Value>

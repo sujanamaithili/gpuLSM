@@ -57,7 +57,7 @@ __device__ int upperBound(int level, Key key, int bufferSize, Pair<Key, Value>* 
 
 
 
-template <typename Key>
+template <typename Key, typename Value>
 __global__ void findBounds(int* d_l, int* d_u, const Key* k1, const Key* k2, int* d_init_count, int bufferSize, Pair<Key, Value>* m, int numLevels) {
     int queryId = blockIdx.x;
     int level = threadIdx.x;
@@ -72,5 +72,5 @@ __global__ void findBounds(int* d_l, int* d_u, const Key* k1, const Key* k2, int
 
 }
 
-template __global__ void findBounds<int, int>( int*, int*, const Key*, const Key*, int*, int);
+template __global__ void findBounds<int, int>( int*, int*, const Key*, const Key*, int*, int, Pair<int, int>*, int);
 
