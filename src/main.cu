@@ -385,14 +385,14 @@ void testBitonicSortWithNulloptGPU() {
 }
 
 int main() {
-    // printf("Running Test with Unique Keys:\n");
-    // runTestWithUniqueKeys();
+    printf("Running Test with Unique Keys:\n");
+    runTestWithUniqueKeys();
 
-    // printf("\nRunning Test with Duplicate Keys:\n");
-    // runTestWithDuplicateKeys();
+    printf("\nRunning Test with Duplicate Keys:\n");
+    runTestWithDuplicateKeys();
 
-    // printf("\nRunning Test with Deleted Keys:\n");
-    // runTestWithDeletedKeys();
+    printf("\nRunning Test with Deleted Keys:\n");
+    runTestWithDeletedKeys();
 
     printf("\nRunning test for merge with tombstones:\n");
     testMergeWithTombstones();

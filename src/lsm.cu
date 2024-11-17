@@ -223,18 +223,20 @@ __host__ void lsmTree<Key, Value>::rangeKeys(const Key* k1, const Key* k2, int n
     int* d_u; 
     int* d_init_count;
     int numLevels = getNumLevels();
+    int bufferSize = getBufferSize();
+    Pair<Key, Value>* m = getMemory();
     cudaMalloc(&d_l, numQueries * numLevels * sizeof(int));
     cudaMalloc(&d_u, numQueries * numLevels * sizeof(int));
     cudaMalloc(&d_init_count, numQueries * numLevels * sizeof(int));
     // Launch kernel to find lower and upper bounds for each query on each level
-    findBounds<<<numQueries, numLevels>>>(d_l, d_u, k1, k2, d_init_count);
+    findBounds<<<numQueries, numLevels>>>(d_l, d_u, k1, k2, d_init_count, bufferSize, m, numLevels);
     int* d_offset;
     cudaMalloc(&d_offset, numQueries * numLevels * sizeof(int));
     int* d_maxoffset;
     cudaMalloc(&d_maxoffset, numQueries * sizeof(int));
     int threadsPerBlock = 256;
     int blocks = (numQueries + threadsPerBlock - 1) / threadsPerBlock;
-    exclusiveSum<<<blocks, threadsPerBlock>>>(d_init_count, d_offset, d_maxoffset, numQueries);
+    exclusiveSum<<<blocks, threadsPerBlock>>>(d_init_count, d_offset, d_maxoffset, numQueries, numLevels);
     
     int* d_maxResultSize;
     int reductionThreads = 256;
@@ -244,7 +246,7 @@ __host__ void lsmTree<Key, Value>::rangeKeys(const Key* k1, const Key* k2, int n
     cudaMemcpy(&maxResultSize, d_maxResultSize, sizeof(int), cudaMemcpyDeviceToHost);
     Pair<Key, Value>* d_result;
     cudaMalloc(&d_result, maxResultSize * sizeof(Pair<Key, Value>));
-    collectElements<<<numQueries, numLevels>>>(d_l, d_u, d_offset, d_result);
+    collectElements<<<numQueries, numLevels>>>(d_l, d_u, d_offset, d_result, bufferSize, m, numLevels);
     int* d_result_offset;
     cudaMalloc(&d_result_offset, numQueries * sizeof(int));
     sortBySegment(d_result, d_maxoffset, d_result_offset, numQueries);
@@ -342,4 +344,5 @@ __host__ void lsmTree<Key, Value>::printAllLevels() const {
         printLevel(i);
     }
 }
+
 

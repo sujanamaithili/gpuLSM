@@ -12,8 +12,8 @@ __global__ void compact(const Pair<Key, Value>* d_result, const int* d_maxoffset
 
     if(segmentLength > 0){
         int segmentStart = d_result_offset[queryId];
-        Key lastKey = d_result[segmentStart].first;
-        if(!d_result[segmentStart].isValueTombstone()){
+        std::optional<Key> lastKey = d_result[segmentStart].first;
+	if(!d_result[segmentStart].isValueTombstone()){
             d_range[segmentStart] = d_result[segmentStart];
             validCount = 1;
         }
