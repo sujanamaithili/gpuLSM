@@ -13,14 +13,20 @@ __global__ void compact(const Pair<Key, Value>* d_result, const int* d_maxoffset
     if(segmentLength > 0){
         segmentStart = d_result_offset[queryId];
         Key lastKey = d_result[segmentStart].first;
-        d_range[segmentStart] = d_result[segmentStart];
-        validCount = 1;
+        if(!d_result[segmentStart].isValueTombstone()){
+            d_range[segmentStart] = d_result[segmentStart];
+            validCount = 1;
+        }
+        
 
         for (int i = 1; i < segmentLength; i++) {
             if (d_result[segmentStart + i].first != lastKey) {
                 lastKey = d_result[segmentStart + i].first;
-                d_range[segmentStart + validCount] = d_result[segmentStart + i];
-                validCount++;
+                if(!d_result[segmentStart + i].isValueTombstone()){
+                    d_range[segmentStart + validCount] = d_result[segmentStart + i];
+                    validCount++;
+                }
+                
             }
         }
     }

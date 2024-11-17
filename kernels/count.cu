@@ -13,12 +13,17 @@ __global__ void count(const Pair<Key, Value>* d_result, const int* d_maxoffset, 
     if(segmentLength > 0){
         segmentStart = d_result_offset[queryId];
         Key lastKey = d_result[segmentStart].first;
-        validCount = 1;
+        if(!d_result[segmentStart].isValueTombstone()){
+            validCount = 1;
+        }
+        
 
         for (int i = 1; i < segmentLength; i++) {
             if (d_result[segmentStart + i].first != lastKey) {
                 lastKey = d_result[segmentStart + i].first;
-                validCount++;
+                if(!d_result[segmentStart + i].isValueTombstone()){
+                    validCount++;
+                }
             }
         }
     }
