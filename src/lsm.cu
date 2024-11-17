@@ -250,9 +250,9 @@ __host__ void lsmTree<Key, Value>::printLevel(int level) const {
     } else {
         printf("Index\tKey\tValue\n");
         for (int i = 0; i < level_size; i++) {
-            if (h_level[i].first.has_value()) {
+            if (!h_level[i].isKeyEmpty()) {
                 printf("%d\t%d\t", i, *(h_level[i].first));
-                if (h_level[i].second.has_value()) {
+                if (!h_level[i].isValueTombstone()) {
                     printf("%d\n", *(h_level[i].second));
                 } else {
                     printf("tombstone\n");

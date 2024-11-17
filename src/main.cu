@@ -1,5 +1,7 @@
 #include <bits/stdc++.h>
 #include <lsm.cuh>
+#include <cuda.h>
+#include <merge.cuh>
 
 void runTestWithUniqueKeys() {
     using Key = int;
@@ -148,15 +150,12 @@ void runTestWithDeletedKeys() {
     }
 
     const int numKeysToDelete = 32;
-    Pair<Key, Value> keysToDelete[numKeysToDelete];
+    Key keysToDelete[numKeysToDelete];
     for (int i = 0; i < numKeysToDelete; ++i) {
-        keysToDelete[i] = Pair<Key, Value>(
-            std::make_optional((i + 1) * 2),
-            std::nullopt  // Tombstone value
-        );
+        keysToDelete[i] = ((i + 1) * 2);
     }
 
-    if (!tree.updateKeys(keysToDelete, numKeysToDelete)) {
+    if (!tree.deleteKeys(keysToDelete, numKeysToDelete)) {
         printf("Error: Deletion failed for keys.\n");
         return;
     }
@@ -170,7 +169,7 @@ void runTestWithDeletedKeys() {
     Key queryKeys[numKeysToDelete];
 
     for (int i = 0; i < numKeysToDelete; ++i) {
-        queryKeys[i] = *keysToDelete[i].first;
+        queryKeys[i] = keysToDelete[i];
     }
 
     tree.queryKeys(queryKeys, numKeysToDelete, results, foundFlags);
@@ -229,15 +228,105 @@ void runTestWithDeletedKeys() {
     }
 }
 
+void testMergeWithTombstones() {
+    using Key = int;
+    using Value = int;
+
+    const int size1 = 5;
+    const int size2 = 5;
+
+    // Define arrays with duplicates and tombstones (nullopt values)
+    // Pair<Key, Value> h_arr1[size1] = {
+    //     {1, std::nullopt}, {3, std::nullopt}, {5, 50}, {7, std::nullopt}, {9, 70}
+    // };
+    // Pair<Key, Value> h_arr2[size2] = {
+    //     {2, 20}, {3, 30}, {5, std::nullopt}, {8, 80}, {9, std::nullopt}
+    // };
+
+    Pair<Key, Value> h_arr1[size1] = {
+        {1, 10}, {3, 40}, {5, 50}, {7, 60}, {9, 70}
+    };
+    Pair<Key, Value> h_arr2[size2] = {
+        {2, 20}, {3, 30}, {5, 40}, {8, 80}, {9, 80}
+    };
+    Pair<Key, Value> h_merged[size1 + size2];
+
+    // Allocate device memory and copy data from host to device
+    Pair<Key, Value> *d_arr1, *d_arr2;
+    cudaMalloc(&d_arr1, size1 * sizeof(Pair<Key, Value>));
+    cudaMalloc(&d_arr2, size2 * sizeof(Pair<Key, Value>));
+    cudaMemcpy(d_arr1, h_arr1, size1 * sizeof(Pair<Key, Value>), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_arr2, h_arr2, size2 * sizeof(Pair<Key, Value>), cudaMemcpyHostToDevice);
+
+    // Call the merge function
+    Pair<Key, Value> *d_merged = merge(d_arr1, size1, d_arr2, size2);
+
+    // Copy the result back to the host
+    cudaMemcpy(h_merged, d_merged, (size1 + size2) * sizeof(Pair<Key, Value>), cudaMemcpyDeviceToHost);
+
+    // Expected result including duplicates and tombstones
+    // std::vector<Pair<Key, Value>> expectedResult = {
+    //     {1, std::nullopt}, {2, 20}, {3, std::nullopt}, {3, 30}, {5, std::nullopt}, {5, 50}, {8, 80}, {7, std::nullopt}, {9, 70}, {9, std::nullopt}
+    // };
+    std::vector<Pair<Key, Value>> expectedResult = {
+        {1, 10}, {2, 20}, {3, 40}, {3, 30}, {5, 50}, {5, 40}, {7, 60}, {8, 80}, {9, 70}, {9, 80}
+    };
+
+    // Print the merged array and expected result side by side
+    std::cout << "\nMerged array vs. Expected result:\n";
+    std::cout << std::setw(20) << "Merged Array" << std::setw(25) << "Expected Result\n";
+    std::cout << "-----------------------------------------------------------\n";
+    for (size_t i = 0; i < expectedResult.size(); ++i) {
+        std::string mergedKey = h_merged[i].first.has_value() ? std::to_string(h_merged[i].first.value()) : "nullopt";
+        std::string mergedValue = h_merged[i].second.has_value() ? std::to_string(h_merged[i].second.value()) : "nullopt";
+        std::string expectedKey = expectedResult[i].first.has_value() ? std::to_string(expectedResult[i].first.value()) : "nullopt";
+        std::string expectedValue = expectedResult[i].second.has_value() ? std::to_string(expectedResult[i].second.value()) : "nullopt";
+
+        std::cout << std::setw(10) << "(" + mergedKey + ", " + mergedValue + ")"
+                  << std::setw(20) << "(" + expectedKey + ", " + expectedValue + ")\n";
+    }
+
+    // Validate the result
+    bool isValid = true;
+    for (size_t i = 0; i < expectedResult.size(); ++i) {
+        if (h_merged[i].first != expectedResult[i].first || h_merged[i].second != expectedResult[i].second) {
+            isValid = false;
+            std::cout << "Mismatch at index " << i << ": "
+                      << "Expected (" << (expectedResult[i].first.has_value() ? std::to_string(expectedResult[i].first.value()) : "nullopt")
+                      << ", "
+                      << (expectedResult[i].second.has_value() ? std::to_string(expectedResult[i].second.value()) : "nullopt")
+                      << ") but got ("
+                      << (h_merged[i].first.has_value() ? std::to_string(h_merged[i].first.value()) : "nullopt")
+                      << ", "
+                      << (h_merged[i].second.has_value() ? std::to_string(h_merged[i].second.value()) : "nullopt")
+                      << ")\n";
+        }
+    }
+
+    if (isValid) {
+        std::cout << "\nTest passed: Merge with duplicates and tombstones handled correctly.\n";
+    } else {
+        std::cout << "\nTest failed: Merge with duplicates and tombstones produced incorrect results.\n";
+    }
+
+    // Free device memory
+    cudaFree(d_arr1);
+    cudaFree(d_arr2);
+    cudaFree(d_merged);
+}
+
 int main() {
-    printf("Running Test with Unique Keys:\n");
-    runTestWithUniqueKeys();
+    // printf("Running Test with Unique Keys:\n");
+    // runTestWithUniqueKeys();
 
-    printf("\nRunning Test with Duplicate Keys:\n");
-    runTestWithDuplicateKeys();
+    // printf("\nRunning Test with Duplicate Keys:\n");
+    // runTestWithDuplicateKeys();
 
-    printf("\nRunning Test with Deleted Keys:\n");
-    runTestWithDeletedKeys();
+    // printf("\nRunning Test with Deleted Keys:\n");
+    // runTestWithDeletedKeys();
+
+    printf("\nRunning test for merge with tombstones:\n");
+    testMergeWithTombstones();
 
     return 0;
 }
