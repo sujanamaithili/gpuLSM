@@ -51,7 +51,7 @@ __global__ void queryKeysKernel(const Key* d_keys, Value* d_results, bool* d_fou
 
     // Search through each level
     for (int level = 0; level < num_levels && !found; ++level) {
-        
+
         if (!(num_batches & (1 << level))) {
             offset += buffer_size << level; 
             continue;
@@ -72,4 +72,4 @@ __global__ void queryKeysKernel(const Key* d_keys, Value* d_results, bool* d_fou
 
 // Explicit template instantiation
 template __global__ void queryKeysKernel<int, int>(
-    const int*, int*, bool*, int, const Pair<int, int>*, int, int);
+    const int*, int*, bool*, int, const Pair<int, int>*, int, int, int);

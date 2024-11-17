@@ -68,7 +68,7 @@ __host__ bool lsmTree<Key, Value>::updateKeys(const Pair<Key, Value>* kv, int ba
 
         merged_size += level_size;
 
-        d_buffer = merge(d_buffer, level_size, m + offset, level_size)
+        d_buffer = merge(d_buffer, level_size, m + offset, level_size);
         cudaMemset(cur, 0, level_size * sizeof(Pair<Key, Value>));
 
         offset += level_size;
@@ -141,7 +141,7 @@ __host__ bool lsmTree<Key, Value>::deleteKeys(const Key* keys, int batch_size)
 
         merged_size += level_size;
 
-        d_buffer = merge(d_buffer, level_size, m + offset, level_size)
+        d_buffer = merge(d_buffer, level_size, m + offset, level_size);
         cudaMemset(cur, 0, level_size * sizeof(Pair<Key, Value>));
 
         offset += level_size;
