@@ -165,13 +165,15 @@ __host__ void lsmTree<Key, Value>::countKeys(const Key* k1, const Key* k2, int n
 
     int numLevels = getNumLevels();
     int bufferSize = getBufferSize();
+    Pair<Key, Value>* m = getMemory();
 
     cudaMalloc(&d_l, numQueries * numLevels * sizeof(int));
     cudaMalloc(&d_u, numQueries * numLevels * sizeof(int));
     cudaMalloc(&d_init_count, numQueries * numLevels * sizeof(int));
 
     // Launch kernel to find lower and upper bounds for each query on each level
-    findBounds<<<numQueries, numLevels>>>(d_l, d_u, k1, k2, d_init_count, bufferSize);
+
+    findBounds<<<numQueries, numLevels>>>(d_l, d_u, k1, k2, d_init_count, bufferSize, m, numLevels);
 
     int* d_offset;
     cudaMalloc(&d_offset, numQueries * numLevels * sizeof(int));
