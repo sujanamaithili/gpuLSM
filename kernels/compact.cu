@@ -34,3 +34,5 @@ __global__ void compact(const Pair<Key, Value>* d_result, const int* d_maxoffset
     d_counts[queryId] = validCount;
 
 }   
+
+template __global__ void compact<int, int>(const Pair<Key, Value>*, const int* , const int*, Pair<Key, Value>*, int*, int);

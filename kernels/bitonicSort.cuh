@@ -6,4 +6,6 @@
 template <typename Key, typename Value>
 void bitonicSortGPU(Pair<Key, Value>* d_arr, long int n);
 
+template <typename Key, typename Value>
+void sortBySegment(Pair<Key, Value>* d_result, int* d_maxoffset, int* d_result_offset, int numQueries);
 #endif 

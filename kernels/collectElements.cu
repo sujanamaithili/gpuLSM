@@ -1,6 +1,6 @@
 #include <cuda_runtime.h>
 
-#include "collectElements.cuh"
+#include <collectElements.cuh>
 
 template <typename Key, typename Value>
 __global__ void collectElements(const int* d_l, const int* d_u, const int* d_offset, Pair<Key, Value>* d_result) {
@@ -25,3 +25,5 @@ __global__ void collectElements(const int* d_l, const int* d_u, const int* d_off
         d_result[startIdx + (i - lower)] = levelData[i];  
     }
 }
+
+template __global__ void collectElements<int, int>(const int*, const int*, const int*, Pair<Key, Value>*);

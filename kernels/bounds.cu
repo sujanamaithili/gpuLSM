@@ -1,9 +1,9 @@
 #include <cuda_runtime.h>
 
-#include "bounds.cuh"
+#include <bounds.cuh>
 
 template <typename Key, typename Value>
-__device__ int lowerBound(int level, Key key) {
+__device__ int lowerBound(int level, Key key, int bufferSize) {
     int offset = 0;
     int level_size = bufferSize << level;
 
@@ -29,7 +29,7 @@ __device__ int lowerBound(int level, Key key) {
 }
 
 template <typename Key, typename Value>
-__device__ int upperBound(int level, Key key) {
+__device__ int upperBound(int level, Key key, int bufferSize) {
     int offset = 0;
     int level_size = bufferSize << level;
 
@@ -58,18 +58,19 @@ __device__ int upperBound(int level, Key key) {
 
 
 template <typename Key>
-__global__ void findBounds(int* d_l, int* d_u, const Key* k1, const Key* k2, int* d_init_count) {
+__global__ void findBounds(int* d_l, int* d_u, const Key* k1, const Key* k2, int* d_init_count, int bufferSize) {
     int queryId = blockIdx.x;
     int level = threadIdx.x;
 
     Key key1 = k1[queryId];
     Key key2 = k2[queryId];
 
-    d_l[queryId * numLevels + level] = lowerBound(level, key1);
-    d_u[queryId * numLevels + level] = upperBound(level, key2);
+    d_l[queryId * numLevels + level] = lowerBound(level, key1, bufferSize);
+    d_u[queryId * numLevels + level] = upperBound(level, key2, bufferSize);
 
     d_init_count[queryId * numLevels + level] = d_u[queryId * numLevels + level] - d_l[queryId * numLevels + level];
 
 }
 
+template __global__ void findBounds<int, int>( int*, int*, const Key*, const Key*, int*, int);
 

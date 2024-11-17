@@ -1,6 +1,6 @@
 #include <cuda_runtime.h>
 
-#include "count.cuh"
+#include <count.cuh>
 
 template <typename Key, typename Value>
 __global__ void count(const Pair<Key, Value>* d_result, const int* d_maxoffset, const int* d_result_offset, int* d_counts, int numQueries) {
@@ -31,3 +31,5 @@ __global__ void count(const Pair<Key, Value>* d_result, const int* d_maxoffset, 
     d_counts[queryId] = validCount;
 
 }   
+
+template __global__ void count<int, int>(const Pair<Key, Value>*, const int*, const int*, int*, int);

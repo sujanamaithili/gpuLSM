@@ -1,6 +1,6 @@
 #include <cuda_runtime.h>
 
-#include "reduceSum.cuh"
+#include <reduceSum.cuh>
 
 __global__ void reduceSum(const int* input, int* result, int size) {
     __shared__ int sharedData[256]; 
