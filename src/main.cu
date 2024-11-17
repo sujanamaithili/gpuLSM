@@ -236,19 +236,19 @@ void testMergeWithTombstones() {
     const int size2 = 5;
 
     // Define arrays with duplicates and tombstones (nullopt values)
-    // Pair<Key, Value> h_arr1[size1] = {
-    //     {1, std::nullopt}, {3, std::nullopt}, {5, 50}, {7, std::nullopt}, {9, 70}
-    // };
-    // Pair<Key, Value> h_arr2[size2] = {
-    //     {2, 20}, {3, 30}, {5, std::nullopt}, {8, 80}, {9, std::nullopt}
-    // };
-
     Pair<Key, Value> h_arr1[size1] = {
-        {1, 10}, {3, 40}, {5, 50}, {7, 60}, {9, 70}
+        {1, std::nullopt}, {3, std::nullopt}, {5, 50}, {7, std::nullopt}, {9, 70}
     };
     Pair<Key, Value> h_arr2[size2] = {
-        {2, 20}, {3, 30}, {5, 40}, {8, 80}, {9, 80}
+        {2, 20}, {3, 30}, {5, std::nullopt}, {8, 80}, {9, std::nullopt}
     };
+
+    // Pair<Key, Value> h_arr1[size1] = {
+    //     {1, 10}, {3, 40}, {5, 50}, {7, 60}, {9, 70}
+    // };
+    // Pair<Key, Value> h_arr2[size2] = {
+    //     {2, 20}, {3, 30}, {5, 40}, {8, 80}, {9, 80}
+    // };
     Pair<Key, Value> h_merged[size1 + size2];
 
     // Allocate device memory and copy data from host to device
@@ -265,12 +265,12 @@ void testMergeWithTombstones() {
     cudaMemcpy(h_merged, d_merged, (size1 + size2) * sizeof(Pair<Key, Value>), cudaMemcpyDeviceToHost);
 
     // Expected result including duplicates and tombstones
-    // std::vector<Pair<Key, Value>> expectedResult = {
-    //     {1, std::nullopt}, {2, 20}, {3, std::nullopt}, {3, 30}, {5, std::nullopt}, {5, 50}, {8, 80}, {7, std::nullopt}, {9, 70}, {9, std::nullopt}
-    // };
     std::vector<Pair<Key, Value>> expectedResult = {
-        {1, 10}, {2, 20}, {3, 40}, {3, 30}, {5, 50}, {5, 40}, {7, 60}, {8, 80}, {9, 70}, {9, 80}
+        {1, std::nullopt}, {2, 20}, {3, std::nullopt}, {3, 30}, {5, 50}, {5, std::nullopt}, {7, std::nullopt}, {8, 80}, {9, 70}, {9, std::nullopt}
     };
+    // std::vector<Pair<Key, Value>> expectedResult = {
+    //     {1, 10}, {2, 20}, {3, 40}, {3, 30}, {5, 50}, {5, 40}, {7, 60}, {8, 80}, {9, 70}, {9, 80}
+    // };
 
     // Print the merged array and expected result side by side
     std::cout << "\nMerged array vs. Expected result:\n";

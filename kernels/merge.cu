@@ -31,7 +31,7 @@ __global__ void mergeKernel(Pair<Key, Value>* d_arr1, int size1, Pair<Key, Value
 
         // If k == 1, return the minimum of the first elements in both arrays
         if (k == 1) {
-            d_merged[idx] = (d_arr1[start1].first < d_arr2[start2].first) ? d_arr1[start1] : d_arr2[start2];
+            d_merged[idx] = (d_arr1[start1].first <= d_arr2[start2].first) ? d_arr1[start1] : d_arr2[start2];
             return;
         }
 
