@@ -12,14 +12,18 @@ __global__ void bitonicSortKernel(Pair<Key, Value>* arr, long int j, long int k)
     long int ij = i ^ j;
 
     if (ij > i) {
+        bool isNullOpt1 = !arr[i].second.has_value();
+        bool isNullOpt2 = !arr[ij].second.has_value();
+
         if ((i & k) == 0) {
-            if (arr[i].first > arr[ij].first) {
+            if ((!isNullOpt1 && isNullOpt2 && arr[i].first == arr[ij].first) || (arr[i].first > arr[ij].first)) {
                 Pair<Key, Value> temp = arr[i];
                 arr[i] = arr[ij];
                 arr[ij] = temp;
             }
-        } else {
-            if (arr[i].first < arr[ij].first) {
+        }
+        else {
+            if ((isNullOpt1 && !isNullOpt2 && arr[i].first == arr[ij].first) ||  (arr[i].first < arr[ij].first)){ 
                 Pair<Key, Value> temp = arr[i];
                 arr[i] = arr[ij];
                 arr[ij] = temp;
@@ -53,16 +57,20 @@ void bitonicSortCPU(Pair<Key, Value>* arr, long int n) {
         for (long int j = k / 2; j > 0; j /= 2) {
             for (long int i = 0; i < n; i++) {
                 long int ij = i ^ j;
-                
                 if (ij > i) {
+                    bool isNullOpt1 = !arr[i].second.has_value();
+                    bool isNullOpt2 = !arr[ij].second.has_value();
+
                     if ((i & k) == 0) {
-                        if (arr[i].first > arr[ij].first) {
+                        // Ascending order: nullopt has the highest priority
+                        if (isNullOpt1 || (!isNullOpt2 && arr[i].first > arr[ij].first)) {
                             Pair<Key, Value> temp = arr[i];
                             arr[i] = arr[ij];
                             arr[ij] = temp;
                         }
                     } else {
-                        if (arr[i].first < arr[ij].first) {
+                        // Descending order: nullopt has the highest priority
+                        if (!isNullOpt1 && (isNullOpt2 || arr[i].first < arr[ij].first)) {
                             Pair<Key, Value> temp = arr[i];
                             arr[i] = arr[ij];
                             arr[ij] = temp;

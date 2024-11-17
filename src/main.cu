@@ -2,6 +2,7 @@
 #include <lsm.cuh>
 #include <cuda.h>
 #include <merge.cuh>
+#include <bitonicSort.cuh>
 
 void runTestWithUniqueKeys() {
     using Key = int;
@@ -315,6 +316,74 @@ void testMergeWithTombstones() {
     cudaFree(d_merged);
 }
 
+void testBitonicSortWithNulloptGPU() {
+    const long int N = 8;
+    using Key = int;
+    using Value = int;
+    using DataType = Pair<Key, Value>;
+
+    // Initialize array with key-value pairs, including some nullopt values
+    DataType h_arr[N] = {
+        {1, 10}, {4, std::nullopt}, {4, 50}, {2, 30}, {2, std::nullopt}, {6, 60}, {7, std::nullopt}, {11, 80}
+    };
+
+    // Expected sorted result with `nullopt` entries prioritized
+    DataType expected[N] = {
+        {1, 10}, {2, std::nullopt}, {2, 30}, {4, std::nullopt}, {4, 50}, {6, 60}, {7, std::nullopt}, {11, 80}
+    };
+
+    // Allocate device memory
+    DataType* d_arr;
+    cudaMalloc(&d_arr, N * sizeof(DataType));
+
+    // Copy data to device
+    cudaMemcpy(d_arr, h_arr, N * sizeof(DataType), cudaMemcpyHostToDevice);
+
+    // Perform GPU bitonic sort
+    bitonicSortGPU<Key, Value>(d_arr, N);
+
+    // Copy sorted data back to host
+    cudaMemcpy(h_arr, d_arr, N * sizeof(DataType), cudaMemcpyDeviceToHost);
+
+    // Print the sorted array
+    std::cout << "Sorted array (GPU):\n";
+    for (long int i = 0; i < N; i++) {
+        std::cout << "("
+                  << (h_arr[i].first.has_value() ? std::to_string(h_arr[i].first.value()) : "nullopt")
+                  << ", "
+                  << (h_arr[i].second.has_value() ? std::to_string(h_arr[i].second.value()) : "nullopt")
+                  << ") ";
+    }
+    std::cout << "\n";
+
+    // Verify the sorted array against the expected result
+    bool isCorrect = true;
+    for (long int i = 0; i < N; i++) {
+        if (h_arr[i].first != expected[i].first || h_arr[i].second != expected[i].second) {
+            isCorrect = false;
+            std::cout << "Mismatch at index " << i << ": "
+                      << "Expected ("
+                      << (expected[i].first.has_value() ? std::to_string(expected[i].first.value()) : "nullopt")
+                      << ", "
+                      << (expected[i].second.has_value() ? std::to_string(expected[i].second.value()) : "nullopt")
+                      << ") but got ("
+                      << (h_arr[i].first.has_value() ? std::to_string(h_arr[i].first.value()) : "nullopt")
+                      << ", "
+                      << (h_arr[i].second.has_value() ? std::to_string(h_arr[i].second.value()) : "nullopt")
+                      << ")\n";
+        }
+    }
+
+    if (isCorrect) {
+        std::cout << "Test passed: GPU bitonic sort handled `nullopt` priority correctly.\n";
+    } else {
+        std::cout << "Test failed: Mismatches found in the sorted result.\n";
+    }
+
+    // Clean up resources
+    cudaFree(d_arr);
+}
+
 int main() {
     // printf("Running Test with Unique Keys:\n");
     // runTestWithUniqueKeys();
@@ -328,5 +397,8 @@ int main() {
     printf("\nRunning test for merge with tombstones:\n");
     testMergeWithTombstones();
 
+    printf("\nRunning test for sort with nullopt:\n");
+    testBitonicSortWithNulloptGPU();
     return 0;
 }
+
