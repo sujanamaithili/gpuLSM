@@ -3,6 +3,6 @@
 
 #include "lsm.cuh"
 
-__global__ reduceSum(const int* input, int* result, int size);
+__global__ void reduceSum(const int* input, int* result, int size);
 
 #endif 

@@ -32,4 +32,4 @@ __global__ void count(const Pair<Key, Value>* d_result, const int* d_maxoffset, 
 
 }   
 
-template __global__ void count<int, int>(const Pair<Key, Value>*, const int*, const int*, int*, int);
+template __global__ void count<int, int>(const Pair<int, int>*, const int*, const int*, int*, int);

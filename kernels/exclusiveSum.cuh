@@ -3,6 +3,6 @@
 
 #include "lsm.cuh"
 
-__global__ void exclusiveSum(const int* d_init_count, int* d_offset, int* d_maxoffset, int numQueries);
+__global__ void exclusiveSum(const int* d_init_count, int* d_offset, int* d_maxoffset, int numQueries, int numLevels);
 
 #endif

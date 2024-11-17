@@ -182,7 +182,7 @@ __host__ void lsmTree<Key, Value>::countKeys(const Key* k1, const Key* k2, int n
 
     int threadsPerBlock = 256;
     int blocks = (numQueries + threadsPerBlock - 1) / threadsPerBlock;
-    exclusiveSum<<<blocks, threadsPerBlock>>>(d_init_count, d_offset, d_maxoffset, numQueries);
+    exclusiveSum<<<blocks, threadsPerBlock>>>(d_init_count, d_offset, d_maxoffset, numQueries, numLevels);
 
     
     int* d_maxResultSize;
@@ -195,7 +195,7 @@ __host__ void lsmTree<Key, Value>::countKeys(const Key* k1, const Key* k2, int n
 
     Pair<Key, Value>* d_result;
     cudaMalloc(&d_result, maxResultSize * sizeof(Pair<Key, Value>));
-    collectElements<<<numQueries, numLevels>>>(d_l, d_u, d_offset, d_result);
+    collectElements<<<numQueries, numLevels>>>(d_l, d_u, d_offset, d_result, bufferSize, m, numLevels);
 
     int* d_result_offset;
     cudaMalloc(&d_result_offset, numQueries * sizeof(int));
