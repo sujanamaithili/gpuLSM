@@ -41,15 +41,17 @@ private:
     int bufferSize; // Size of buffer
     int maxSize; // Max Size of LSM tree
     int numBatches; // No of batches pushed each of buffer size
+    bool sortStable; // true for stable sort
 
 public:
     Pair<Key, Value>* memory; // Array of key value pairs for all levels
 
-    __host__ lsmTree(int numLevels, int bufferSize) {
+    __host__ lsmTree(int numLevels, int bufferSize, bool sortStable) {
         this->numLevels = numLevels;
         this->bufferSize = bufferSize;
         this->maxSize = 0;
         this->numBatches = 0;
+        this->sortStable = sortStable;
         // Calculate maxSize based on the number of levels and buffer size.
         for (int i = 0; i < numLevels; ++i) {
             this->maxSize += (bufferSize << i);
@@ -68,6 +70,31 @@ public:
         cudaDeviceSynchronize();
     }
 
+    __host__ lsmTree(int numLevels, int bufferSize) {
+        this->numLevels = numLevels;
+        this->bufferSize = bufferSize;
+        this->maxSize = 0;
+        this->numBatches = 0;
+        this->sortStable = false;
+        // Calculate maxSize based on the number of levels and buffer size.
+        for (int i = 0; i < numLevels; ++i) {
+            this->maxSize += (bufferSize << i);
+        }
+
+        // Allocate memory on the GPU.
+        cudaError_t status = cudaMalloc(&memory, maxSize * sizeof(Pair<Key, Value>));
+        if (status != cudaSuccess) {
+            printf("Error allocating memory for LSM tree: %s\n", cudaGetErrorString(status));
+            #ifndef __CUDA_ARCH__
+            // Only call exit if on the host
+            exit(1);
+            #endif
+        }
+        initializeMemory<<<(maxSize + 255) / 256, 256>>>(memory, maxSize);
+        cudaDeviceSynchronize();
+    }
+
+
     __host__ ~lsmTree() {
         if (memory != nullptr) {
             cudaFree(memory);
@@ -80,6 +107,7 @@ public:
 
     __host__ __device__ int getNumLevels() const { return numLevels; }
     __host__ __device__ int getBufferSize() const { return bufferSize; }
+    __host__ __device__ int getsortStable() const { return sortStable; }
 
     __host__ bool updateKeys(const Pair<Key, Value>* kv, int batch_size)
     {
@@ -88,8 +116,11 @@ public:
         cudaMalloc(&d_buffer, batch_size * sizeof(Pair<Key, Value>));
         cudaMemcpy(d_buffer, kv, batch_size * sizeof(Pair<Key, Value>), cudaMemcpyHostToDevice);
 
-        
-        bitonicSortGPU(d_buffer, batch_size);
+        bool stable = getsortStable();
+        if(stable){
+            mergeSortGPU(d_buffer, batch_size);
+        }
+        else bitonicSortGPU(d_buffer, batch_size);
         
         int offset = 0;
         int level_size = batch_size; //b
@@ -128,7 +159,11 @@ public:
         cudaMalloc(&d_buffer, batch_size * sizeof(Pair<Key, Value>));
         cudaMemcpy(d_buffer, h_buffer, batch_size * sizeof(Pair<Key, Value>), cudaMemcpyHostToDevice);
 
-        bitonicSortGPU(d_buffer, batch_size);
+        bool stable = getsortStable();
+        if(stable){
+            mergeSortGPU(d_buffer, batch_size);
+        }
+        else bitonicSortGPU(d_buffer, batch_size);
 
         int offset = 0;
         int level_size = batch_size;
