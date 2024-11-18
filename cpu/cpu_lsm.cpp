@@ -134,3 +134,158 @@ void lsmTree<Key, Value>::queryKeys(const std::vector<Key>& keys, std::vector<Va
 }
 
 
+template <typename Key, typename Value>
+void lsmTree<Key, Value>::countKeys(const std::vector<Key>& k1, const std::vector<Key>& k2, int numQueries, std::vector<int>& counts) {
+    // Initialize counts for each query
+    counts.resize(numQueries, 0);
+
+    std::vector<int> l(numQueries * numLevels, 0);
+    std::vector<int> u(numQueries * numLevels, 0);
+    std::vector<int> init_count(numQueries * numLevels, 0);
+
+    for (int queryIdx = 0; queryIdx < numQueries; ++queryIdx) {
+        Key lowerBound = k1[queryIdx];
+        Key upperBound = k2[queryIdx];
+
+        for (int level = 0; level < numLevels; ++level) {
+            int levelStart = (1 << level) - 1;
+            int levelSize = (1 << level) * bufferSize;
+
+            int idx = queryIdx * numLevels + level;
+
+            l[idx] = std::distance(memory + levelStart, std::lower_bound(memory + levelStart, memory + levelStart + levelSize, Pair<Key, Value>(lowerBound, {}), [](const Pair<Key, Value>& a, const Pair<Key, Value>& b) {
+                return a.first < b.first;
+            }));
+            u[idx] = std::distance(memory + levelStart, std::upper_bound(memory + levelStart, memory + levelStart + levelSize, Pair<Key, Value>(upperBound, {}), [](const Pair<Key, Value>& a, const Pair<Key, Value>& b) {
+                return a.first < b.first;
+            }));
+
+            init_count[idx] = u[idx] - l[idx];
+        }
+
+        std::vector<int> offset(numQueries * numLevels, 0);
+        for (int queryIdx = 0; queryIdx < numQueries; ++queryIdx) {
+            int runningSum = 0;
+            for (int level = 0; level < numLevels; ++level) {
+                int idx = queryIdx * numLevels + level;
+                offset[idx] = runningSum;
+                runningSum += init_count[idx];
+            }
+        }
+
+        std::vector<std::vector<Pair<Key, Value>>> results(numQueries);
+        for (int queryIdx = 0; queryIdx < numQueries; ++queryIdx) {
+            for (int level = 0; level < numLevels; ++level) {
+                int idx = queryIdx * numLevels + level;
+                int start = l[idx];
+                int end = u[idx];
+                int levelStart = (1 << level) - 1;
+
+                for (int i = start; i < end; ++i) {
+                    results[queryIdx].push_back(memory[levelStart + i]);
+                }
+            }
+        }
+
+        for (int queryIdx = 0; queryIdx < numQueries; ++queryIdx) {
+            std::stable_sort(results[queryIdx].begin(), results[queryIdx].end(), [](const Pair<Key, Value>& a, const Pair<Key, Value>& b) {
+                return a.first < b.first;
+            });
+
+            // Count unique keys (skip tombstones and duplicates)
+            Key lastKey;
+            bool firstKey = true;
+            counts[queryIdx] = 0;
+
+            for (auto pair : results[queryIdx]) {
+                if (firstKey || pair.first != lastKey) {
+                    if (!pair.isValueTombstone()) { 
+                        counts[queryIdx]++;
+                    }
+                    lastKey = pair.first;
+                    firstKey = false;
+                }
+            }
+        }
+
+    }
+}
+
+
+template <typename Key, typename Value>
+void lsmTree<Key, Value>::rangeKeys(const std::vector<Key>& k1, const std::vector<Key>& k2, int numQueries, std::vector<std::vector<Pair<Key, Value>>>& results) {
+    // Initialize counts for each query
+    counts.resize(numQueries, 0);
+
+    std::vector<int> l(numQueries * numLevels, 0);
+    std::vector<int> u(numQueries * numLevels, 0);
+    std::vector<int> init_count(numQueries * numLevels, 0);
+
+    for (int queryIdx = 0; queryIdx < numQueries; ++queryIdx) {
+        Key lowerBound = k1[queryIdx];
+        Key upperBound = k2[queryIdx];
+
+        for (int level = 0; level < numLevels; ++level) {
+            int levelStart = (1 << level) - 1;
+            int levelSize = (1 << level) * bufferSize;
+
+            int idx = queryIdx * numLevels + level;
+
+            l[idx] = std::distance(memory + levelStart, std::lower_bound(memory + levelStart, memory + levelStart + levelSize, Pair<Key, Value>(lowerBound, {}), [](const Pair<Key, Value>& a, const Pair<Key, Value>& b) {
+                return a.first < b.first;
+            }));
+            u[idx] = std::distance(memory + levelStart, std::upper_bound(memory + levelStart, memory + levelStart + levelSize, Pair<Key, Value>(upperBound, {}), [](const Pair<Key, Value>& a, const Pair<Key, Value>& b) {
+                return a.first < b.first;
+            }));
+
+            init_count[idx] = u[idx] - l[idx];
+        }
+
+        std::vector<int> offset(numQueries * numLevels, 0);
+        for (int queryIdx = 0; queryIdx < numQueries; ++queryIdx) {
+            int runningSum = 0;
+            for (int level = 0; level < numLevels; ++level) {
+                int idx = queryIdx * numLevels + level;
+                offset[idx] = runningSum;
+                runningSum += init_count[idx];
+            }
+        }
+
+        std::vector<std::vector<Pair<Key, Value>>> results(numQueries);
+        for (int queryIdx = 0; queryIdx < numQueries; ++queryIdx) {
+            for (int level = 0; level < numLevels; ++level) {
+                int idx = queryIdx * numLevels + level;
+                int start = l[idx];
+                int end = u[idx];
+                int levelStart = (1 << level) - 1;
+
+                for (int i = start; i < end; ++i) {
+                    results[queryIdx].push_back(memory[levelStart + i]);
+                }
+            }
+        }
+
+        for (int queryIdx = 0; queryIdx < numQueries; ++queryIdx) {
+            std::stable_sort(results[queryIdx].begin(), results[queryIdx].end(), [](const Pair<Key, Value>& a, const Pair<Key, Value>& b) {
+                return a.first < b.first;
+            });
+
+            // Count unique keys (skip tombstones and duplicates)
+            std::vector<Pair<Key, Value>> compacted;
+            Key lastKey;
+            bool firstKey = true;
+
+            for (auto pair : results[queryIdx]) {
+                if (firstKey || pair.first != lastKey) {
+                    if (!pair.isValueTombstone()) { 
+                        compacted.push_back(pair);
+                    }
+                    lastKey = pair.first;
+                    firstKey = false;
+                }
+            }
+            results[queryIdx] = std::move(compacted);
+        }
+
+    }
+}

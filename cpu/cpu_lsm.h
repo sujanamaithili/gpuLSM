@@ -45,9 +45,9 @@ public:
 
     void queryKeys(const std::vector<Key>& keys, std::vector<Value>& results, std::vector<bool>& foundFlags);
 
-    void countKeys(const std::vector<Key>& k1, const std::vector<Key>& k2, std::vector<int>& counts);
+    void countKeys(const std::vector<Key>& k1, const std::vector<Key>& k2, int numQueries, std::vector<int>& counts);
     
-    void rangeKeys(const std::vector<Key>& k1, const std::vector<Key>& k2, int numQueries, std::vector<Pair<Key, Value>>& range, std::vector<int>& counts,  std::vector<int>& range_offset);
+    void rangeKeys(const std::vector<Key>& k1, const std::vector<Key>& k2, int numQueries, std::vector<std::vector<Pair<Key, Value>>>& results);
 
     void printLevel(int level) const;
 
