@@ -3,7 +3,7 @@ NVCC := nvcc
 CXXFLAGS := -w -Ikernels -Isrc --expt-relaxed-constexpr
 
 # Source files
-SRCS := kernels/mergeSort.cu kernels/initialize.cu kernels/compact.cu kernels/bounds.cu kernels/exclusiveSum.cu kernels/reduceSum.cu kernels/collectElements.cu kernels/count.cu kernels/query.cu kernels/merge.cu kernels/bitonicSort.cu src/lsm.cu src/main.cu
+SRCS := src/main.cu
 
 # Object files
 OBJS := $(SRCS:.cu=.o)

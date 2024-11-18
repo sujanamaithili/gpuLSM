@@ -1,13 +1,9 @@
 #include <bits/stdc++.h>
 #include <lsm.cuh>
 #include <cuda.h>
-#include <merge.cuh>
-#include <bounds.cuh>
-#include <exclusiveSum.cuh>
-#include <reduceSum.cuh>
-#include <collectElements.cuh>
-#include <bitonicSort.cuh>
 #include <iostream>
+#include <merge.cuh>
+#include <bitonicSort.cuh>
 
 void runTestWithUniqueKeys() {
     using Key = int;
