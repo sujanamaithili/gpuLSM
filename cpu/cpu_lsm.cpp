@@ -81,3 +81,56 @@ bool lsmTree<Key, Value>::updateKeys(const std::vector<Pair<Key, Value>>& kv) {
     return false;
 }
 
+template <typename Key, typename Value>
+void lsmTree<Key, Value>::queryKeys(const std::vector<Key>& keys, std::vector<Value>& results, std::vector<bool>& foundFlags) {
+    results.resize(keys.size());
+    foundFlags.resize(keys.size());
+
+    for (size_t i = 0; i < keys.size(); ++i) {
+        Key key = keys[i];
+        bool found = false;
+
+        for (int level = 0; level < numLevels; ++level) {
+
+            // Skip this level if it hasn't been filled
+            if (!(numBatches & (1 << level))) {
+                continue;
+            }
+
+            int levelStart = (1 << level) - 1; // Start index of this level
+            int levelSize = bufferSize * (1 << level); // Size of this level
+
+            // Search in the current level (left to right)
+            for (int j = levelStart; j < levelStart + levelSize; ++j) {
+
+                // Skip empty slots (this will never be the case, just safety)
+                if (memory[j].isKeyEmpty()) {
+                    continue;
+                }
+                if (memory[j].first.has_value() && memory[j].first.value() == key) {
+                    // Key found
+                    found = true;
+                    foundFlags[i] = true;
+                    if (!memory[j].isValueTombstone()) {
+                        results[i] = memory[j].second.value();
+                    } else {
+                        // Tombstone
+                        results[i] = Value(); 
+                        foundFlags[i] = false;
+                    }
+                    break;
+                }
+            }
+            if (found) {
+                break;
+            }
+        }
+
+        if (!found) {
+            results[i] = Value(); // Default value if not found
+            foundFlags[i] = false;
+        }
+    }
+}
+
+
