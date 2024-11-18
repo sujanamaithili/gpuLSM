@@ -1,10 +1,6 @@
 #include <bits/stdc++.h>
 #include <lsm.cuh>
 #include <cuda.h>
-#include <merge.cuh>
-#include <bounds.cuh>
-#include <collectElements.cuh>
-#include <bitonicSort.cuh>
 #include <iostream>
 
 void runTestWithUniqueKeys() {
