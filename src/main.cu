@@ -2,6 +2,8 @@
 #include <lsm.cuh>
 #include <cuda.h>
 #include <iostream>
+#include <merge.cuh>
+#include <bitonicSort.cuh>
 
 void runTestWithUniqueKeys() {
     using Key = int;

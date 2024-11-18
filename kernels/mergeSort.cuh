@@ -110,7 +110,7 @@ void sortBySegment(Pair<Key, Value>* d_result, int* d_maxoffset, int numQueries)
 
 // Function to check if the array is sorted
 template <typename Key, typename Value>
-bool isSorted(Pair<Key, Value>* arr, long int n) {
+bool isSorted2(Pair<Key, Value>* arr, long int n) {
     for (long int i = 1; i < n; i++) {
         if (arr[i - 1].first > arr[i].first) return false;
     }
@@ -167,8 +167,8 @@ void testMergeSort() {
     std::cout << "Time taken in CPU merge sort = " << cpuTime << " s\n";
 
     // Verify if the arrays are sorted
-    bool gpuSorted = isSorted(arrGPU, N);
-    bool cpuSorted = isSorted(arrCPU, N);
+    bool gpuSorted = isSorted2(arrGPU, N);
+    bool cpuSorted = isSorted2(arrCPU, N);
     std::cout << "GPU Merge Sort: " << (gpuSorted ? "Sorted correctly" : "Not sorted correctly") << std::endl;
     std::cout << "CPU Merge Sort: " << (cpuSorted ? "Sorted correctly" : "Not sorted correctly") << std::endl;
 

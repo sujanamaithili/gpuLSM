@@ -108,44 +108,5 @@ bool compareResults(const std::vector<Pair<Key, Value>>& cpu_result, Pair<Key, V
     return true;
 }
 
-void testMerge() {
-    using Key = int;
-    using Value = int;
-
-    const int size1 = 5;
-    const int size2 = 5;
-
-    Pair<Key, Value> h_arr1[size1] = {{1, 10}, {3, 30}, {5, 50}, {7, 70}, {9, 90}};
-    Pair<Key, Value> h_arr2[size2] = {{2, 20}, {4, 40}, {6, 60}, {8, 80}, {10, 100}};
-    Pair<Key, Value> h_merged[size1 + size2];
-
-    // Allocate device memory and copy data from host to device
-    Pair<Key, Value> *d_arr1, *d_arr2;
-    cudaMalloc(&d_arr1, size1 * sizeof(Pair<Key, Value>));
-    cudaMalloc(&d_arr2, size2 * sizeof(Pair<Key, Value>));
-    cudaMemcpy(d_arr1, h_arr1, size1 * sizeof(Pair<Key, Value>), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_arr2, h_arr2, size2 * sizeof(Pair<Key, Value>), cudaMemcpyHostToDevice);
-
-    // Call the merge function
-    Pair<Key, Value> *d_merged = merge(d_arr1, size1, d_arr2, size2);
-
-    // Copy the result back to the host
-    cudaMemcpy(h_merged, d_merged, (size1 + size2) * sizeof(Pair<Key, Value>), cudaMemcpyDeviceToHost);
-
-    // Print the merged array
-    std::cout << "Merged array:\n";
-    for (int i = 0; i < size1 + size2; i++) {
-       std::cout << "(" 
-          << (h_merged[i].first.has_value() ? std::to_string(h_merged[i].first.value()) : "nullopt")
-          << ", " 
-          << (h_merged[i].second.has_value() ? std::to_string(h_merged[i].second.value()) : "nullopt")
-          << ") ";
-    }
-    std::cout << std::endl;
-
-    // Free device memory
-    cudaFree(d_arr1);
-    cudaFree(d_arr2);
-    cudaFree(d_merged);
-}
 #endif  // GPU_MERGE_HELPER_H
+
