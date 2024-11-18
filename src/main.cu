@@ -2,7 +2,12 @@
 #include <lsm.cuh>
 #include <cuda.h>
 #include <merge.cuh>
+#include <bounds.cuh>
+#include <exclusiveSum.cuh>
+#include <reduceSum.cuh>
+#include <collectElements.cuh>
 #include <bitonicSort.cuh>
+#include <iostream>
 
 void runTestWithUniqueKeys() {
     using Key = int;
@@ -384,84 +389,122 @@ void testBitonicSortWithNulloptGPU() {
     cudaFree(d_arr);
 }
 
-void runTestCountKeys() {
+// Helper function to test `countKeys` with duplicates and tombstones
+void testCountKeysWithDuplicatesAndTombstones() {
     using Key = int;
     using Value = int;
     const int numLevels = 4;
     const int bufferSize = 32;
+    const int totalKeys = 96;
+    const int numQueries = 2;
 
-    // Initialize LSM tree
+    // Define the LSM tree
     lsmTree<Key, Value> tree(numLevels, bufferSize);
+    Pair<Key, Value> kvPairs[bufferSize];
 
-    const int totalPairs = 96;
-    Pair<Key, Value> kvPairs[totalPairs];
-
-    // Populate key-value pairs with unique keys in increasing order
-    for (int i = 0; i < totalPairs; ++i) {
-        kvPairs[i] = Pair<Key, Value>(
-            std::make_optional(i + 1),
-            std::make_optional((i + 1) * 10)
-        );
+    // Step 1: Insert the initial batch of key-value pairs
+    for (int i = 0; i < bufferSize; ++i) {
+        kvPairs[i] = Pair<Key, Value>(std::make_optional(i), std::make_optional(i * 10));
     }
 
-    // Insert key-value pairs in batches
-    const int batchSize = 32;
-    for (int i = 0; i < totalPairs; i += batchSize) {
-        if (!tree.updateKeys(kvPairs + i, batchSize)) {
-            printf("Error: Insertion failed for batch starting at index %d.\n", i);
-            return;
+    if (!tree.updateKeys(kvPairs, bufferSize)) {
+        std::cerr << "Error: Insertion failed for the initial batch.\n";
+        return;
+    }
+    std::cout << "Successfully inserted the initial batch of keys.\n";
+
+    // Step 2: Insert a batch of duplicate keys with updated values
+    for (int i = 0; i < bufferSize; ++i) {
+        kvPairs[i] = Pair<Key, Value>(std::make_optional(i), std::make_optional(1000 + i * 100));
+    }
+
+    if (!tree.updateKeys(kvPairs, bufferSize)) {
+        std::cerr << "Error: Insertion failed for the batch of duplicates.\n";
+        return;
+    }
+    std::cout << "Successfully inserted the batch of duplicates with updated values.\n";
+
+    // Step 3: Insert a batch with tombstones (simulating deletions)
+    for (int i = 0; i < bufferSize; ++i) {
+        if (i % 5 == 0) { // Mark keys divisible by 5 as deleted
+            kvPairs[i] = Pair<Key, Value>(std::make_optional(i), std::nullopt);
+        } else {
+            kvPairs[i] = Pair<Key, Value>(std::make_optional(i), std::make_optional(2000 + i * 100));
         }
     }
 
-    printf("\nTesting countKeys function:\n");
+    if (!tree.updateKeys(kvPairs, bufferSize)) {
+        std::cerr << "Error: Insertion failed for the batch with tombstones.\n";
+        return;
+    }
+    std::cout << "Successfully inserted the batch with tombstones.\n";
 
-    // Define queries with ranges (k1, k2)
-    const int numQueries = 5;
-    Key k1[numQueries] = {1, 10, 20, 30, 40};
-    Key k2[numQueries] = {10, 20, 30, 40, 50};
-    int counts[numQueries];
+    // Print the LSM tree levels after insertion
+    tree.printAllLevels();
 
-    // Call the countKeys function
-    tree.countKeys(k1, k2, numQueries, counts);
+    // Define keys for lower and upper bound queries
+    Key h_k1[numQueries] = {10, 20};
+    Key h_k2[numQueries] = {30, 40};
 
-    // Expected counts for each range
-    int expectedCounts[numQueries] = {10, 11, 11, 11, 11};
+    // Allocate device memory for input keys
+    Key *d_k1, *d_k2;
+    cudaMalloc(&d_k1, numQueries * sizeof(Key));
+    cudaMalloc(&d_k2, numQueries * sizeof(Key));
+    cudaMemcpy(d_k1, h_k1, numQueries * sizeof(Key), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_k2, h_k2, numQueries * sizeof(Key), cudaMemcpyHostToDevice);
+
+    // Allocate host memory for output counts
+    int h_counts[numQueries];
+
+    // Call `countKeys` method
+    tree.countKeys(d_k1, d_k2, numQueries, h_counts);
+
+    // Expected results considering tombstones (keys divisible by 5 are deleted)
+    int expectedCounts[numQueries] = {16, 9}; // Adjusted counts excluding keys with tombstones
 
     // Validate the results
+    std::cout << "\nTesting `countKeys` method with duplicates and tombstones:\n";
     bool isCorrect = true;
-    for (int i = 0; i < numQueries; ++i) {
-        if (counts[i] != expectedCounts[i]) {
+    for (int queryId = 0; queryId < numQueries; ++queryId) {
+        std::cout << "Query " << queryId << " -> Count: " << h_counts[queryId] << "\n";
+        if (h_counts[queryId] != expectedCounts[queryId]) {
+            std::cerr << "Error: Mismatch for Query " << queryId
+                      << ". Expected " << expectedCounts[queryId]
+                      << " but got " << h_counts[queryId] << ".\n";
             isCorrect = false;
-            printf("Error: For range (%d, %d), expected count %d but got %d.\n",
-                   k1[i], k2[i], expectedCounts[i], counts[i]);
         }
     }
 
     if (isCorrect) {
-        printf("Test passed: countKeys function returned correct counts for all queries.\n");
+        std::cout << "Test passed: `countKeys` method correctly handled duplicates and tombstones.\n";
     } else {
-        printf("Test failed: countKeys function returned incorrect counts for some queries.\n");
+        std::cout << "Test failed: Mismatches found in the `countKeys` results.\n";
     }
+
+    // Free device memory
+    cudaFree(d_k1);
+    cudaFree(d_k2);
 }
+
 
 int main() {
-/*    printf("Running Test with Unique Keys:\n");
-    runTestWithUniqueKeys();
+    // printf("Running Test with Unique Keys:\n");
+    // runTestWithUniqueKeys();
 
-    printf("\nRunning Test with Duplicate Keys:\n");
-    runTestWithDuplicateKeys();
+    // printf("\nRunning Test with Duplicate Keys:\n");
+    // runTestWithDuplicateKeys();
 
-    printf("\nRunning Test with Deleted Keys:\n");
-    runTestWithDeletedKeys();
+    // printf("\nRunning Test with Deleted Keys:\n");
+    // runTestWithDeletedKeys();
 
-    printf("\nRunning test for merge with tombstones:\n");
-    testMergeWithTombstones();
+    // printf("\nRunning test for merge with tombstones:\n");
+    // testMergeWithTombstones();
 
-    printf("\nRunning test for sort with nullopt:\n");
-    testBitonicSortWithNulloptGPU();*/
+    // printf("\nRunning test for sort with nullopt:\n");
+    // testBitonicSortWithNulloptGPU();
 
-    printf("\nRunning test for count keys with no tombstone");
-    runTestCountKeys();
+    printf("Running test for countKeys method with duplicates and tombstones:\n");
+    testCountKeysWithDuplicatesAndTombstones();
+
     return 0;
 }
-

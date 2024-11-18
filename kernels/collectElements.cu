@@ -24,7 +24,7 @@ __global__ void collectElements(const int* d_l, const int* d_u, const int* d_off
     int level_size = bufferSize << level; 
 
     // Collect elements within the range and store them in result buffer
-    for (int i = lower; i <= upper && i < level_size; ++i) {
+    for (int i = lower; i < upper && i < level_size; ++i) {
         d_result[startIdx + (i - lower)] = levelData[i];  
     }
 }
