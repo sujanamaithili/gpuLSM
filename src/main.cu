@@ -3,8 +3,6 @@
 #include <cuda.h>
 #include <merge.cuh>
 #include <bounds.cuh>
-#include <exclusiveSum.cuh>
-#include <reduceSum.cuh>
 #include <collectElements.cuh>
 #include <bitonicSort.cuh>
 #include <iostream>
