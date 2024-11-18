@@ -238,18 +238,23 @@ __host__ void lsmTree<Key, Value>::rangeKeys(const Key* k1, const Key* k2, int n
     int* d_l;                
     int* d_u; 
     int* d_init_count;
+
     int numLevels = getNumLevels();
     int bufferSize = getBufferSize();
     Pair<Key, Value>* m = getMemory();
+
     cudaMalloc(&d_l, numQueries * numLevels * sizeof(int));
     cudaMalloc(&d_u, numQueries * numLevels * sizeof(int));
     cudaMalloc(&d_init_count, numQueries * numLevels * sizeof(int));
+
     // Launch kernel to find lower and upper bounds for each query on each level
     findBounds<<<numQueries, numLevels>>>(d_l, d_u, k1, k2, d_init_count, bufferSize, m, numLevels);
+    
     int* d_offset;
     cudaMalloc(&d_offset, numQueries * numLevels * sizeof(int));
     int* d_maxoffset;
     cudaMalloc(&d_maxoffset, numQueries * sizeof(int));
+    
     int threadsPerBlock = 256;
     int blocks = (numQueries + threadsPerBlock - 1) / threadsPerBlock;
     exclusiveSum<<<blocks, threadsPerBlock>>>(d_init_count, d_offset, d_maxoffset, numQueries, numLevels);
@@ -259,14 +264,31 @@ __host__ void lsmTree<Key, Value>::rangeKeys(const Key* k1, const Key* k2, int n
     int reductionThreads = 256;
     int reductionBlocks = (numQueries + reductionThreads - 1) / reductionThreads;
     reduceSum<<<reductionBlocks, reductionThreads>>>(d_maxoffset, d_maxResultSize, numQueries);
+    
     int maxResultSize;
     cudaMemcpy(&maxResultSize, d_maxResultSize, sizeof(int), cudaMemcpyDeviceToHost);
-    Pair<Key, Value>* d_result;
-    cudaMalloc(&d_result, maxResultSize * sizeof(Pair<Key, Value>));
-    collectElements<<<numQueries, numLevels>>>(d_l, d_u, d_offset, d_result, bufferSize, m, numLevels);
+    
     int* d_result_offset;
     cudaMalloc(&d_result_offset, numQueries * sizeof(int));
-    sortBySegment(d_result, d_maxoffset, d_result_offset, numQueries);
+    std::vector<int> h_maxoffset(numQueries);
+    int* h_result_offset = new int[numQueries];
+    cudaMemcpy(h_maxoffset.data(), d_maxoffset, numQueries * sizeof(int), cudaMemcpyDeviceToHost);
+
+    int offset = 0;
+    for(int i=0; i < numQueries; i++){
+        int segmentLength = h_maxoffset[i];;
+        h_result_offset[i] = offset;
+        offset += segmentLength;
+    }
+    cudaMemcpy(d_result_offset, h_result_offset, numQueries * sizeof(int), cudaMemcpyHostToDevice);
+
+
+    Pair<Key, Value>* d_result;
+    cudaMalloc(&d_result, maxResultSize * sizeof(Pair<Key, Value>));
+    collectElements<<<numQueries, numLevels>>>(d_l, d_u, d_offset, d_result_offset, d_result, bufferSize, m, numLevels);
+
+    sortBySegment(d_result, d_maxoffset, numQueries);
+    
     int* d_counts;
     cudaMalloc(&d_counts, numQueries * sizeof(int));
     Pair<Key, Value>* d_range;
