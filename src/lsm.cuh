@@ -1,17 +1,6 @@
 #ifndef GPU_LSM_TREE_H
 #define GPU_LSM_TREE_H
 
-#include "query.cuh"
-#include "merge.cuh"
-#include "initialize.cuh"
-#include "bitonicSort.cuh"
-#include "mergeSort.cuh"
-#include "reduceSum.cuh"
-#include "bounds.cuh"
-#include "collectElements.cuh"
-#include "compact.cuh"
-#include "count.cuh"
-#include "exclusiveSum.cuh"
 #include <cstdio>
 #include <vector>
 #include <cuda.h>
@@ -33,6 +22,18 @@ struct Pair {
     __host__ __device__ bool isValueTombstone() const { return !second.has_value(); }
 };
 
+#include "query.cuh"
+#include "merge.cuh"
+#include "initialize.cuh"
+#include "bitonicSort.cuh"
+#include "mergeSort.cuh"
+#include "reduceSum.cuh"
+#include "bounds.cuh"
+#include "collectElements.cuh"
+#include "compact.cuh"
+#include "count.cuh"
+#include "exclusiveSum.cuh"
+
 template <typename Key, typename Value>
 class lsmTree {
 private:
@@ -44,8 +45,7 @@ private:
 public:
     Pair<Key, Value>* memory; // Array of key value pairs for all levels
 
-    template <typename Key, typename Value>
-    __host__ lsmTree<Key, Value>::lsmTree(int numLevels, int bufferSize) {
+    __host__ lsmTree(int numLevels, int bufferSize) {
         this->numLevels = numLevels;
         this->bufferSize = bufferSize;
         this->maxSize = 0;
@@ -68,8 +68,7 @@ public:
         cudaDeviceSynchronize();
     }
 
-    template <typename Key, typename Value>
-    __host__ lsmTree<Key, Value>::~lsmTree() {
+    __host__ ~lsmTree() {
         if (memory != nullptr) {
             cudaFree(memory);
         }
@@ -82,8 +81,7 @@ public:
     __host__ __device__ int getNumLevels() const { return numLevels; }
     __host__ __device__ int getBufferSize() const { return bufferSize; }
 
-    template <typename Key, typename Value>
-    __host__ bool lsmTree<Key, Value>::updateKeys(const Pair<Key, Value>* kv, int batch_size)
+    __host__ bool updateKeys(const Pair<Key, Value>* kv, int batch_size)
     {
         
         Pair<Key, Value>* d_buffer;
@@ -119,8 +117,7 @@ public:
         return true;
     }
 
-    template <typename Key, typename Value>
-    __host__ bool lsmTree<Key, Value>::deleteKeys(const Key* keys, int batch_size)
+    __host__ bool deleteKeys(const Key* keys, int batch_size)
     {
 
         Pair<Key, Value>* h_buffer = new Pair<Key, Value>[batch_size];
@@ -160,8 +157,7 @@ public:
         return true;
     }
 
-    template <typename Key, typename Value>
-    __host__ void lsmTree<Key, Value>::queryKeys(const Key* keys, int size, Value* results, bool* foundFlags) {
+    __host__ void queryKeys(const Key* keys, int size, Value* results, bool* foundFlags) {
         // Allocate device memory for keys, results, and found flags
         Key* d_keys;
         Value* d_results;
@@ -192,8 +188,7 @@ public:
         cudaFree(d_foundFlags);
     }
 
-    template <typename Key, typename Value>
-    __host__ void lsmTree<Key, Value>::printLevel(int level) const {
+    __host__ void printLevel(int level) const {
         if (level >= numLevels) {
             printf("Error: Level %d does not exist. Tree has %d levels.\n", level, numLevels);
             return;
@@ -252,8 +247,7 @@ public:
         delete[] h_level;
     }
 
-    template <typename Key, typename Value>
-    __host__ void lsmTree<Key, Value>::printAllLevels() const {
+    __host__ void printAllLevels() const {
         printf("\nLSM Tree Structure:\n");
         printf("==================\n");
         printf("Number of levels: %d\n", numLevels);
@@ -266,8 +260,7 @@ public:
         }
     }
 
-    template <typename Key, typename Value>
-    __host__ void lsmTree<Key, Value>::countKeys(const Key* k1, const Key* k2, int numQueries, int* counts) {
+    __host__ void countKeys(const Key* k1, const Key* k2, int numQueries, int* counts) {
         // lower and upper bounds index in every level of each query
         int* d_l;                
         int* d_u; 
@@ -340,8 +333,7 @@ public:
         cudaFree(d_counts);
     }
     
-    template <typename Key, typename Value>
-    __host__ void lsmTree<Key, Value>::rangeKeys(const Key* k1, const Key* k2, int numQueries, Pair<Key, Value>* range, int* counts, int* range_offset) {
+    __host__ void rangeKeys(const Key* k1, const Key* k2, int numQueries, Pair<Key, Value>* range, int* counts, int* range_offset) {
         // lower and upper bounds index in every level of each query
         int* d_l;                
         int* d_u; 
@@ -421,4 +413,5 @@ public:
 };
 
 #endif // GPU_LSM_TREE_H
+
 

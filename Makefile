@@ -3,7 +3,7 @@ NVCC := nvcc
 CXXFLAGS := -w -Ikernels -Isrc --expt-relaxed-constexpr
 
 # Source files
-SRCS := src/lsm.cu src/main.cu
+SRCS := src/main.cu
 
 # Object files
 OBJS := $(SRCS:.cu=.o)
