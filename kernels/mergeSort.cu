@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <ctime>
 #include "mergeSort.cuh"
+#include <vector>
 
 template <typename Key, typename Value>
 __device__ void Merge(Pair<Key, Value>* arr, Pair<Key, Value>* temp, long int left, long int middle, long int right) {
@@ -92,6 +93,7 @@ void mergeSortCPU(Pair<Key, Value>* arr, Pair<Key, Value>* temp, long int left, 
 template <typename Key, typename Value>
 void sortBySegment(Pair<Key, Value>* d_result, int* d_maxoffset, int* d_result_offset, int numQueries) {
     std::vector<int> h_maxoffset(numQueries);
+    int* h_result_offset = new int[numQueries];
     cudaMemcpy(h_maxoffset.data(), d_maxoffset, numQueries * sizeof(int), cudaMemcpyDeviceToHost);
 
     int offset = 0;
@@ -100,10 +102,12 @@ void sortBySegment(Pair<Key, Value>* d_result, int* d_maxoffset, int* d_result_o
         
         mergeSortGPU(d_result + offset, segmentLength);
 
-        d_result_offset[i] = offset;
+        h_result_offset[i] = offset;
 
         offset += segmentLength;
     }
+    cudaMemcpy(d_result_offset, h_result_offset, numQueries * sizeof(int), cudaMemcpyHostToDevice);
+
 }
 
 // Function to check if the array is sorted

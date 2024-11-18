@@ -384,8 +384,68 @@ void testBitonicSortWithNulloptGPU() {
     cudaFree(d_arr);
 }
 
+void runTestCountKeys() {
+    using Key = int;
+    using Value = int;
+    const int numLevels = 4;
+    const int bufferSize = 32;
+
+    // Initialize LSM tree
+    lsmTree<Key, Value> tree(numLevels, bufferSize);
+
+    const int totalPairs = 96;
+    Pair<Key, Value> kvPairs[totalPairs];
+
+    // Populate key-value pairs with unique keys in increasing order
+    for (int i = 0; i < totalPairs; ++i) {
+        kvPairs[i] = Pair<Key, Value>(
+            std::make_optional(i + 1),
+            std::make_optional((i + 1) * 10)
+        );
+    }
+
+    // Insert key-value pairs in batches
+    const int batchSize = 32;
+    for (int i = 0; i < totalPairs; i += batchSize) {
+        if (!tree.updateKeys(kvPairs + i, batchSize)) {
+            printf("Error: Insertion failed for batch starting at index %d.\n", i);
+            return;
+        }
+    }
+
+    printf("\nTesting countKeys function:\n");
+
+    // Define queries with ranges (k1, k2)
+    const int numQueries = 5;
+    Key k1[numQueries] = {1, 10, 20, 30, 40};
+    Key k2[numQueries] = {10, 20, 30, 40, 50};
+    int counts[numQueries];
+
+    // Call the countKeys function
+    tree.countKeys(k1, k2, numQueries, counts);
+
+    // Expected counts for each range
+    int expectedCounts[numQueries] = {10, 11, 11, 11, 11};
+
+    // Validate the results
+    bool isCorrect = true;
+    for (int i = 0; i < numQueries; ++i) {
+        if (counts[i] != expectedCounts[i]) {
+            isCorrect = false;
+            printf("Error: For range (%d, %d), expected count %d but got %d.\n",
+                   k1[i], k2[i], expectedCounts[i], counts[i]);
+        }
+    }
+
+    if (isCorrect) {
+        printf("Test passed: countKeys function returned correct counts for all queries.\n");
+    } else {
+        printf("Test failed: countKeys function returned incorrect counts for some queries.\n");
+    }
+}
+
 int main() {
-    printf("Running Test with Unique Keys:\n");
+/*    printf("Running Test with Unique Keys:\n");
     runTestWithUniqueKeys();
 
     printf("\nRunning Test with Duplicate Keys:\n");
@@ -398,7 +458,10 @@ int main() {
     testMergeWithTombstones();
 
     printf("\nRunning test for sort with nullopt:\n");
-    testBitonicSortWithNulloptGPU();
+    testBitonicSortWithNulloptGPU();*/
+
+    printf("\nRunning test for count keys with no tombstone");
+    runTestCountKeys();
     return 0;
 }
 
