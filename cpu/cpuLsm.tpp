@@ -1,4 +1,4 @@
-#include "cpu_lsm.h"
+#include "cpuLsm.h"
 #include <iostream>
 #include <unordered_map>
 #include <iterator>
@@ -193,7 +193,7 @@ void lsmTree<Key, Value>::countKeys(const std::vector<Key>& k1, const std::vecto
             });
 
             // Count unique keys (skip tombstones and duplicates)
-            Key lastKey;
+            std::optional<Key> lastKey;
             bool firstKey = true;
             counts[queryIdx] = 0;
 
@@ -214,9 +214,6 @@ void lsmTree<Key, Value>::countKeys(const std::vector<Key>& k1, const std::vecto
 
 template <typename Key, typename Value>
 void lsmTree<Key, Value>::rangeKeys(const std::vector<Key>& k1, const std::vector<Key>& k2, int numQueries, std::vector<std::vector<Pair<Key, Value>>>& results) {
-    // Initialize counts for each query
-    counts.resize(numQueries, 0);
-
     std::vector<int> l(numQueries * numLevels, 0);
     std::vector<int> u(numQueries * numLevels, 0);
     std::vector<int> init_count(numQueries * numLevels, 0);
@@ -272,7 +269,7 @@ void lsmTree<Key, Value>::rangeKeys(const std::vector<Key>& k1, const std::vecto
 
             // Count unique keys (skip tombstones and duplicates)
             std::vector<Pair<Key, Value>> compacted;
-            Key lastKey;
+            std::optional<Key> lastKey;
             bool firstKey = true;
 
             for (auto pair : results[queryIdx]) {

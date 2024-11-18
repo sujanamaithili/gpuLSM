@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <cstdio>
 
-using namespace std;
 
 template <typename Key, typename Value>
 struct Pair {
@@ -22,6 +21,11 @@ struct Pair {
 
     bool isKeyEmpty() const { return !first.has_value(); }
     bool isValueTombstone() const { return !second.has_value(); }
+
+    // Define operator== for comparison
+    bool operator==(const Pair& other) const {
+        return first == other.first && second == other.second;
+    }
 };
 
 template <typename Key, typename Value>
@@ -61,5 +65,7 @@ public:
     int getBufferSize() const { return bufferSize; }
 
 };
+
+#include "cpuLsm.tpp"
 
 #endif
