@@ -8,7 +8,6 @@ __global__ void exclusiveSum(const int* d_init_count, int* d_offset, int* d_maxo
 
     if(queryId < numQueries) {
         int sum = 0;
-        int numLevels = numLevels;
         for (int level = 0; level < numLevels; ++level) {
             int idx = queryId * numLevels + level;
             d_offset[idx] = sum; 

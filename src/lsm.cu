@@ -11,6 +11,7 @@
 #include "count.cuh"
 #include "exclusiveSum.cuh"
 #include <cstdio>
+#include <vector>
 #include <cuda.h>
 
 template class lsmTree<int, int>;
@@ -195,13 +196,26 @@ __host__ void lsmTree<Key, Value>::countKeys(const Key* k1, const Key* k2, int n
     int maxResultSize;
     cudaMemcpy(&maxResultSize, d_maxResultSize, sizeof(int), cudaMemcpyDeviceToHost);
 
-    Pair<Key, Value>* d_result;
-    cudaMalloc(&d_result, maxResultSize * sizeof(Pair<Key, Value>));
-    collectElements<<<numQueries, numLevels>>>(d_l, d_u, d_offset, d_result, bufferSize, m, numLevels);
-
     int* d_result_offset;
     cudaMalloc(&d_result_offset, numQueries * sizeof(int));
-    sortBySegment(d_result, d_maxoffset, d_result_offset, numQueries);
+    std::vector<int> h_maxoffset(numQueries);
+    int* h_result_offset = new int[numQueries];
+    cudaMemcpy(h_maxoffset.data(), d_maxoffset, numQueries * sizeof(int), cudaMemcpyDeviceToHost);
+
+    int offset = 0;
+    for(int i=0; i < numQueries; i++){
+        int segmentLength = h_maxoffset[i];;
+        h_result_offset[i] = offset;
+        offset += segmentLength;
+    }
+    cudaMemcpy(d_result_offset, h_result_offset, numQueries * sizeof(int), cudaMemcpyHostToDevice);
+
+
+    Pair<Key, Value>* d_result;
+    cudaMalloc(&d_result, maxResultSize * sizeof(Pair<Key, Value>));
+    collectElements<<<numQueries, numLevels>>>(d_l, d_u, d_offset, d_result_offset, d_result, bufferSize, m, numLevels);
+
+    sortBySegment(d_result, d_maxoffset, numQueries);
 
     int* d_counts;
     cudaMalloc(&d_counts, numQueries * sizeof(int));
