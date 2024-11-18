@@ -100,7 +100,8 @@ void testRangeKeys() {
 
     std::vector<int> k1 = {1};
     std::vector<int> k2 = {3};
-    std::vector<std::vector<Pair<int, std::string>>> results;
+    int size = k1.size();
+    std::vector<std::vector<Pair<int, std::string>>> results(size);
     tree.rangeKeys(k1, k2, 1, results);
 
     // Expected results
