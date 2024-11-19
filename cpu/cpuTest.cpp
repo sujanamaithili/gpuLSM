@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include "cpuLsm.h"
+#include <bits/stdc++.h>
 
 void testUpdateKeys() {
     lsmTree<int, std::string> tree(3, 4);
@@ -117,12 +118,66 @@ void testRangeKeys() {
     std::cout << "testRangeKeys passed.\n";
 }
 
-int main() {
-    testUpdateKeys();
-    testQueryKeys();
-    testCountKeys();
-    testRangeKeys();
+void testLSMTree(const std::vector<int>& testSizes) {
+    using Key = int;
+    using Value = int;
 
-    std::cout << "All tests passed successfully.\n";
+    for (int numUpdates : testSizes) {
+        if (numUpdates <= 0 || (numUpdates & (numUpdates - 1)) != 0) {
+            std::cout << "Error: Invalid size " << numUpdates << ". Skipping.\n";
+            continue;
+        }
+
+        const int numLevels = 4;
+        const int bufferSize = numUpdates/4;
+
+        // Measure initialization time
+        auto initStart = std::chrono::high_resolution_clock::now();
+        lsmTree<Key, Value> tree(numLevels, bufferSize);
+        auto initEnd = std::chrono::high_resolution_clock::now();
+        std::cout << "Initialized LSM tree with " << numUpdates 
+                  << " keys in " 
+                  << std::chrono::duration<double>(initEnd - initStart).count() 
+                  << " seconds.\n";
+
+        // Generate random key-value pairs
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<Key> keyDist(1, 1000);
+        std::uniform_int_distribution<Value> valueDist(1, 10000);
+
+        std::vector<Pair<Key, Value>> kvPairs(numUpdates);
+        for (int i = 0; i < numUpdates; ++i) {
+            kvPairs[i] = Pair<Key, Value>(
+                std::make_optional(keyDist(gen)),
+                std::make_optional(valueDist(gen))
+            );
+        }
+
+        // Measure update time
+        auto updateStart = std::chrono::high_resolution_clock::now();
+        if (!tree.updateKeys(kvPairs)) {
+            std::cout << "Error: Update failed for size " << numUpdates << ".\n";
+            continue;
+        }
+        auto updateEnd = std::chrono::high_resolution_clock::now();
+        std::cout << "Updated " << numUpdates 
+                  << " keys in " 
+                  << std::chrono::duration<double>(updateEnd - updateStart).count() 
+                  << " seconds.\n";
+    }
+}
+
+int main() {
+    // testUpdateKeys();
+    // testQueryKeys();
+    // testCountKeys();
+    // testRangeKeys();
+
+    std::vector<int> testSizes = {16, 256, 4096, 65536, 1048576, 16777216};
+    testLSMTree(testSizes);
+
+    // std::cout << "All tests passed successfully.\n";
     return 0;
 }
+
