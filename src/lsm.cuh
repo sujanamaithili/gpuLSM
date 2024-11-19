@@ -351,7 +351,7 @@ public:
 
         Pair<Key, Value>* d_result;
         cudaMalloc(&d_result, maxResultSize * sizeof(Pair<Key, Value>));
-        collectElements<<<numQueries, numLevels>>>(d_l, d_u, d_offset, d_result_offset, d_result, bufferSize, m, numLevels);
+        collectElements<<<findBlocks, findThreads>>>(d_l, d_u, d_offset, d_result_offset, d_result, bufferSize, m, numLevels, numQueries);
 
         sortBySegment(d_result, d_maxoffset, numQueries);
 
@@ -426,7 +426,7 @@ public:
 
         Pair<Key, Value>* d_result;
         cudaMalloc(&d_result, maxResultSize * sizeof(Pair<Key, Value>));
-        collectElements<<<numQueries, numLevels>>>(d_l, d_u, d_offset, d_result_offset, d_result, bufferSize, m, numLevels);
+        collectElements<<<findBlocks, findThreads>>>(d_l, d_u, d_offset, d_result_offset, d_result, bufferSize, m, numLevels, numQueries);
 
         sortBySegment(d_result, d_maxoffset, numQueries);
         
