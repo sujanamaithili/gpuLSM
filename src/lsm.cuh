@@ -77,7 +77,7 @@ public:
     __host__ __device__ void incrementBatchCounter() { numBatches++; }
     __host__ __device__ int getNumBatches() const { return numBatches; }
     __host__ __device__ Pair<Key, Value>* getMemory() const { return memory; }
-
+    __host__ __device__ int getMaxSize() const {return maxSize; }
     __host__ __device__ int getNumLevels() const { return numLevels; }
     __host__ __device__ int getBufferSize() const { return bufferSize; }
 

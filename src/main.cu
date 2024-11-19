@@ -483,6 +483,58 @@ void testCountKeysWithDuplicatesAndTombstones() {
 }
 
 
+void testLSMTreePerformance(const std::vector<int>& testSizes) {
+    using Key = int;
+    using Value = int;
+
+    for (int numUpdates : testSizes) {
+        const int numLevels = 4;
+        const int bufferSize = numUpdates/4;
+
+        if (numUpdates <= 0 || numUpdates % bufferSize != 0 || (numUpdates & (numUpdates - 1)) != 0) {
+            printf("Error: Invalid input %d. Skipping.\n", numUpdates);
+            continue;
+        }
+
+        // Measure initialization time
+        auto initStart = std::chrono::high_resolution_clock::now();
+        lsmTree<Key, Value> tree(numLevels, bufferSize);
+        auto initEnd = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> initElapsed = initEnd - initStart;
+        printf("Initialized LSM tree with %d levels and buffer size %d in %.6f seconds.\n",
+               numLevels, bufferSize, initElapsed.count());
+
+        // Generate random key-value pairs
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<Key> keyDist(1, 1000);
+        std::uniform_int_distribution<Value> valueDist(1, 10000);
+
+        std::vector<Pair<Key, Value>> kvPairs(numUpdates);
+        for (int i = 0; i < numUpdates; ++i) {
+            kvPairs[i] = Pair<Key, Value>(
+                std::make_optional(keyDist(gen)),
+                std::make_optional(valueDist(gen))
+            );
+        }
+
+        // Measure update time
+        const int numBatches = numUpdates / bufferSize;
+        auto updateStart = std::chrono::high_resolution_clock::now();
+        for (int batch = 0; batch < numBatches; ++batch) {
+            // Pass a pointer to the batch start and its size
+            if (!tree.updateKeys(&kvPairs[batch * bufferSize], bufferSize)) {
+                printf("Error: Update failed for batch %d.\n", batch);
+                return;
+            }
+        }
+        auto updateEnd = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> updateElapsed = updateEnd - updateStart;
+        printf("Updated %d keys in batches of %d in %.6f seconds.\n",
+               numUpdates, bufferSize, updateElapsed.count());
+    }
+}
+
 int main() {
     // printf("Running Test with Unique Keys:\n");
     // runTestWithUniqueKeys();
@@ -499,8 +551,11 @@ int main() {
     // printf("\nRunning test for sort with nullopt:\n");
     // testBitonicSortWithNulloptGPU();
 
-    printf("Running test for countKeys method with duplicates and tombstones:\n");
-    testCountKeysWithDuplicatesAndTombstones();
+    // printf("Running test for countKeys method with duplicates and tombstones:\n");
+    // testCountKeysWithDuplicatesAndTombstones();
 
+    std::vector<int> testSizes = {16, 256, 4096, 65536, 1048576, 16777216};
+    testLSMTreePerformance(testSizes);
     return 0;
 }
+
