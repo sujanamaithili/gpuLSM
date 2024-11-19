@@ -165,6 +165,25 @@ void testLSMTree(const std::vector<int>& testSizes) {
                   << " keys in " 
                   << std::chrono::duration<double>(updateEnd - updateStart).count() 
                   << " seconds.\n";
+
+        // Generate random keys for querying
+        std::vector<Key> queryKeys(numUpdates);
+        for (int i = 0; i < numUpdates; ++i) {
+            queryKeys[i] = keyDist(gen);
+        }
+
+        // Prepare results and flags
+        std::vector<Value> queryResults(queryKeys.size());
+        std::vector<bool> queryFlags(queryKeys.size());
+
+        // Measure query time
+        auto queryStart = std::chrono::high_resolution_clock::now();
+        tree.queryKeys(queryKeys, queryResults, queryFlags);
+        auto queryEnd = std::chrono::high_resolution_clock::now();
+        std::cout << "Queried " << queryKeys.size()
+                  << " keys in "
+                  << std::chrono::duration<double>(queryEnd - queryStart).count()
+                  << " seconds.\n";
     }
 }
 
@@ -180,4 +199,5 @@ int main() {
     // std::cout << "All tests passed successfully.\n";
     return 0;
 }
+
 

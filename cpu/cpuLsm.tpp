@@ -97,31 +97,52 @@ void lsmTree<Key, Value>::queryKeys(const std::vector<Key>& keys, std::vector<Va
                 continue;
             }
 
-            int levelStart = (1 << level) - 1; // Start index of this level
-            int levelSize = bufferSize * (1 << level); // Size of this level
+            int levelStart = (1 << level) - 1;  // Start index of this level
+            int levelSize = bufferSize * (1 << level);  // Size of this level
+            int levelEnd = levelStart + levelSize;  // End index of this level
 
-            // Search in the current level (left to right)
-            for (int j = levelStart; j < levelStart + levelSize; ++j) {
+            // Perform binary search for the key in the current level
+            int left = levelStart;
+            int right = levelEnd - 1;
+            int firstOccurrence = -1;
 
-                // Skip empty slots (this will never be the case, just safety)
-                if (memory[j].isKeyEmpty()) {
+            while (left <= right) {
+                int mid = left + (right - left) / 2;
+
+                if (memory[mid].isKeyEmpty()) {
+                    // Skip empty slots, adjust search range
+                    right = mid - 1;
                     continue;
                 }
-                if (memory[j].first.has_value() && memory[j].first.value() == key) {
-                    // Key found
-                    found = true;
-                    foundFlags[i] = true;
-                    if (!memory[j].isValueTombstone()) {
-                        results[i] = memory[j].second.value();
+
+                if (memory[mid].first.has_value()) {
+                    Key midKey = memory[mid].first.value();
+                    if (midKey == key) {
+                        // Key found, record first occurrence and continue searching left
+                        firstOccurrence = mid;
+                        right = mid - 1;
+                    } else if (midKey < key) {
+                        left = mid + 1;
                     } else {
-                        // Tombstone
-                        results[i] = Value(); 
-                        foundFlags[i] = false;
+                        right = mid - 1;
                     }
-                    break;
+                } else {
+                    // Invalid or empty key
+                    right = mid - 1;
                 }
             }
-            if (found) {
+
+            if (firstOccurrence != -1) {
+                // Key found at the first occurrence
+                found = true;
+                foundFlags[i] = true;
+                if (!memory[firstOccurrence].isValueTombstone()) {
+                    results[i] = memory[firstOccurrence].second.value();
+                } else {
+                    // Tombstone
+                    results[i] = Value();
+                    foundFlags[i] = false;
+                }
                 break;
             }
         }
@@ -286,3 +307,4 @@ void lsmTree<Key, Value>::rangeKeys(const std::vector<Key>& k1, const std::vecto
 
     }
 }
+

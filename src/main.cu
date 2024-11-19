@@ -510,7 +510,7 @@ void testLSMTreePerformance(const std::vector<int>& testSizes) {
         std::uniform_int_distribution<Key> keyDist(1, 1000);
         std::uniform_int_distribution<Value> valueDist(1, 10000);
 
-        std::vector<Pair<Key, Value>> kvPairs(numUpdates);
+        Pair<Key, Value>* kvPairs = new Pair<Key, Value>[numUpdates];
         for (int i = 0; i < numUpdates; ++i) {
             kvPairs[i] = Pair<Key, Value>(
                 std::make_optional(keyDist(gen)),
@@ -525,6 +525,7 @@ void testLSMTreePerformance(const std::vector<int>& testSizes) {
             // Pass a pointer to the batch start and its size
             if (!tree.updateKeys(&kvPairs[batch * bufferSize], bufferSize)) {
                 printf("Error: Update failed for batch %d.\n", batch);
+                delete[] kvPairs;
                 return;
             }
         }
@@ -532,6 +533,29 @@ void testLSMTreePerformance(const std::vector<int>& testSizes) {
         std::chrono::duration<double> updateElapsed = updateEnd - updateStart;
         printf("Updated %d keys in batches of %d in %.6f seconds.\n",
                numUpdates, bufferSize, updateElapsed.count());
+
+        // Generate random keys for querying
+        Key* keysToQuery = new Key[numUpdates / 2];
+        for (int i = 0; i < numUpdates / 2; ++i) {
+            keysToQuery[i] = keyDist(gen);
+        }
+
+        // Prepare results and flags
+        Value* queryResults = new Value[numUpdates / 2];
+        bool* queryFlags = new bool[numUpdates / 2];
+
+        // Measure query time
+        auto queryStart = std::chrono::high_resolution_clock::now();
+        tree.queryKeys(keysToQuery, numUpdates / 2, queryResults, queryFlags);
+        auto queryEnd = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> queryElapsed = queryEnd - queryStart;
+        printf("Queried %d keys in %.6f seconds.\n", numUpdates / 2, queryElapsed.count());
+
+        // Free allocated memory
+        delete[] kvPairs;
+        delete[] keysToQuery;
+        delete[] queryResults;
+        delete[] queryFlags;
     }
 }
 
@@ -558,4 +582,5 @@ int main() {
     testLSMTreePerformance(testSizes);
     return 0;
 }
+
 
