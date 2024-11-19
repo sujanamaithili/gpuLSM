@@ -310,8 +310,10 @@ public:
         cudaMalloc(&d_init_count, numQueries * numLevels * sizeof(int));
 
         // Launch kernel to find lower and upper bounds for each query on each level
-
-        findBounds<<<numQueries, numLevels>>>(d_l, d_u, k1, k2, d_init_count, bufferSize, m, numLevels);
+        int findThreads = 256;
+        int totalfindThreads = numQueries * numLevels;
+        int findBlocks = (totalfindThreads + findThreads - 1) / findThreads;
+        findBounds<<<findBlocks, findThreads>>>(d_l, d_u, k1, k2, d_init_count, bufferSize, m, numLevels, numQueries);
 
         int* d_offset;
         cudaMalloc(&d_offset, numQueries * numLevels * sizeof(int));
@@ -349,7 +351,7 @@ public:
 
         Pair<Key, Value>* d_result;
         cudaMalloc(&d_result, maxResultSize * sizeof(Pair<Key, Value>));
-        collectElements<<<numQueries, numLevels>>>(d_l, d_u, d_offset, d_result_offset, d_result, bufferSize, m, numLevels);
+        collectElements<<<findBlocks, findThreads>>>(d_l, d_u, d_offset, d_result_offset, d_result, bufferSize, m, numLevels, numQueries);
 
         sortBySegment(d_result, d_maxoffset, numQueries);
 
@@ -383,7 +385,11 @@ public:
         cudaMalloc(&d_init_count, numQueries * numLevels * sizeof(int));
 
         // Launch kernel to find lower and upper bounds for each query on each level
-        findBounds<<<numQueries, numLevels>>>(d_l, d_u, k1, k2, d_init_count, bufferSize, m, numLevels);
+
+        int findThreads = 256;
+        int totalfindThreads = numQueries * numLevels;
+        int findBlocks = (totalfindThreads + findThreads - 1) / findThreads;
+        findBounds<<<findBlocks, findThreads>>>(d_l, d_u, k1, k2, d_init_count, bufferSize, m, numLevels, numQueries);
         
         int* d_offset;
         cudaMalloc(&d_offset, numQueries * numLevels * sizeof(int));
@@ -420,7 +426,7 @@ public:
 
         Pair<Key, Value>* d_result;
         cudaMalloc(&d_result, maxResultSize * sizeof(Pair<Key, Value>));
-        collectElements<<<numQueries, numLevels>>>(d_l, d_u, d_offset, d_result_offset, d_result, bufferSize, m, numLevels);
+        collectElements<<<findBlocks, findThreads>>>(d_l, d_u, d_offset, d_result_offset, d_result, bufferSize, m, numLevels, numQueries);
 
         sortBySegment(d_result, d_maxoffset, numQueries);
         
