@@ -575,11 +575,11 @@ int main() {
     // printf("\nRunning test for sort with nullopt:\n");
     // testBitonicSortWithNulloptGPU();
 
-    // printf("Running test for countKeys method with duplicates and tombstones:\n");
-    // testCountKeysWithDuplicatesAndTombstones();
+    printf("Running test for countKeys method with duplicates and tombstones:\n");
+    testCountKeysWithDuplicatesAndTombstones();
 
-    std::vector<int> testSizes = {16, 256, 4096, 65536, 1048576, 16777216};
-    testLSMTreePerformance(testSizes);
+    // std::vector<int> testSizes = {16, 256, 4096, 65536, 1048576, 16777216};
+    // testLSMTreePerformance(testSizes);
     return 0;
 }
 

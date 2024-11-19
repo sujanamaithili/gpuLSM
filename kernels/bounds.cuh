@@ -4,17 +4,24 @@
 #include "lsm.cuh"
 
 template <typename Key, typename Value>
-__global__ void findBounds(int* d_l, int* d_u, const Key* k1, const Key* k2, int* d_init_count, int bufferSize, Pair<Key, Value>* m, int numLevels) {
-    int queryId = blockIdx.x;
-    int level = threadIdx.x;
+__global__ void findBounds(int* d_l, int* d_u, const Key* k1, const Key* k2, int* d_init_count, int bufferSize, Pair<Key, Value>* m, int numLevels, int numQueries) {
+    // int queryId = blockIdx.x;
+    // int level = threadIdx.x;
 
-    Key key1 = k1[queryId];
-    Key key2 = k2[queryId];
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int queryId = idx / numLevels; 
+    int level = idx % numLevels;
 
-    d_l[queryId * numLevels + level] = lowerBound(level, key1, bufferSize, m);
-    d_u[queryId * numLevels + level] = upperBound(level, key2, bufferSize, m);
+    if (queryId < numQueries && level < numLevels) {
+        Key key1 = k1[queryId];
+        Key key2 = k2[queryId];
 
-    d_init_count[queryId * numLevels + level] = d_u[queryId * numLevels + level] - d_l[queryId * numLevels + level];
+        d_l[queryId * numLevels + level] = lowerBound(level, key1, bufferSize, m);
+        d_u[queryId * numLevels + level] = upperBound(level, key2, bufferSize, m);
+
+        d_init_count[queryId * numLevels + level] = d_u[queryId * numLevels + level] - d_l[queryId * numLevels + level];
+    }
+   
 
 }
 
