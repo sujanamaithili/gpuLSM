@@ -122,21 +122,20 @@ void testLSMTree(const std::vector<int>& testSizes) {
     using Key = int;
     using Value = int;
 
-    for (int numUpdates : testSizes) {
+    for (int bufferSize : testSizes) {
+        const int numLevels = 4;
+        int numUpdates = 4 * bufferSize;
         if (numUpdates <= 0 || (numUpdates & (numUpdates - 1)) != 0) {
             std::cout << "Error: Invalid size " << numUpdates << ". Skipping.\n";
             continue;
         }
 
-        const int numLevels = 4;
-        const int bufferSize = numUpdates/4;
-
         // Measure initialization time
         auto initStart = std::chrono::high_resolution_clock::now();
         lsmTree<Key, Value> tree(numLevels, bufferSize);
         auto initEnd = std::chrono::high_resolution_clock::now();
-        std::cout << "Initialized LSM tree with " << numUpdates 
-                  << " keys in " 
+        std::cout << "Initialized LSM tree with " << bufferSize 
+                  << " keys in level 0" 
                   << std::chrono::duration<double>(initEnd - initStart).count() 
                   << " seconds.\n";
 
@@ -167,8 +166,8 @@ void testLSMTree(const std::vector<int>& testSizes) {
                   << " seconds.\n";
 
         // Generate random keys for querying
-        std::vector<Key> queryKeys(numUpdates);
-        for (int i = 0; i < numUpdates; ++i) {
+        std::vector<Key> queryKeys(bufferSize);
+        for (int i = 0; i < bufferSize; ++i) {
             queryKeys[i] = keyDist(gen);
         }
 
@@ -199,5 +198,6 @@ int main() {
     // std::cout << "All tests passed successfully.\n";
     return 0;
 }
+
 
 

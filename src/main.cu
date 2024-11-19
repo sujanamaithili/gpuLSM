@@ -487,9 +487,9 @@ void testLSMTreePerformance(const std::vector<int>& testSizes) {
     using Key = int;
     using Value = int;
 
-    for (int numUpdates : testSizes) {
+    for (int bufferSize : testSizes) {
         const int numLevels = 4;
-        const int bufferSize = numUpdates/4;
+        int numUpdates = 4 * bufferSize;
 
         if (numUpdates <= 0 || numUpdates % bufferSize != 0 || (numUpdates & (numUpdates - 1)) != 0) {
             printf("Error: Invalid input %d. Skipping.\n", numUpdates);
@@ -535,21 +535,21 @@ void testLSMTreePerformance(const std::vector<int>& testSizes) {
                numUpdates, bufferSize, updateElapsed.count());
 
         // Generate random keys for querying
-        Key* keysToQuery = new Key[numUpdates / 2];
-        for (int i = 0; i < numUpdates / 2; ++i) {
+        Key* keysToQuery = new Key[bufferSize];
+        for (int i = 0; i < bufferSize; ++i) {
             keysToQuery[i] = keyDist(gen);
         }
 
         // Prepare results and flags
-        Value* queryResults = new Value[numUpdates / 2];
-        bool* queryFlags = new bool[numUpdates / 2];
+        Value* queryResults = new Value[bufferSize];
+        bool* queryFlags = new bool[bufferSize];
 
         // Measure query time
         auto queryStart = std::chrono::high_resolution_clock::now();
-        tree.queryKeys(keysToQuery, numUpdates / 2, queryResults, queryFlags);
+        tree.queryKeys(keysToQuery, bufferSize, queryResults, queryFlags);
         auto queryEnd = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> queryElapsed = queryEnd - queryStart;
-        printf("Queried %d keys in %.6f seconds.\n", numUpdates / 2, queryElapsed.count());
+        printf("Queried %d keys in %.6f seconds.\n", bufferSize, queryElapsed.count());
 
         // Free allocated memory
         delete[] kvPairs;
@@ -575,12 +575,13 @@ int main() {
     // printf("\nRunning test for sort with nullopt:\n");
     // testBitonicSortWithNulloptGPU();
 
-    printf("Running test for countKeys method with duplicates and tombstones:\n");
-    testCountKeysWithDuplicatesAndTombstones();
+    // printf("Running test for countKeys method with duplicates and tombstones:\n");
+    // testCountKeysWithDuplicatesAndTombstones();
 
-    // std::vector<int> testSizes = {16, 256, 4096, 65536, 1048576, 16777216};
-    // testLSMTreePerformance(testSizes);
+    std::vector<int> testSizes = {16, 256, 4096, 65536, 1048576, 16777216};
+    testLSMTreePerformance(testSizes);
     return 0;
 }
+
 
 
