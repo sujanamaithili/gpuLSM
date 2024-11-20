@@ -5,6 +5,7 @@
 #include <vector>
 #include <cuda.h>
 #include <optional>
+#include <cuda_runtime.h>
 
 template <typename T>
 void printValue(const T& value) {
@@ -307,6 +308,12 @@ public:
     }
 
     __host__ void countKeys(const Key* k1, const Key* k2, int numQueries, int* counts) {
+        Key *d_k1, *d_k2;
+        cudaMalloc(&d_k1, numQueries * sizeof(Key));
+        cudaMalloc(&d_k2, numQueries * sizeof(Key));
+        cudaMemcpy(d_k1, k1, numQueries * sizeof(Key), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_k2, k2, numQueries * sizeof(Key), cudaMemcpyHostToDevice);
+
         // lower and upper bounds index in every level of each query
         int* d_l;                
         int* d_u; 
@@ -324,7 +331,8 @@ public:
         int findThreads = 256;
         int totalfindThreads = numQueries * numLevels;
         int findBlocks = (totalfindThreads + findThreads - 1) / findThreads;
-        findBounds<<<findBlocks, findThreads>>>(d_l, d_u, k1, k2, d_init_count, bufferSize, m, numLevels, numQueries);
+        findBounds<<<findBlocks, findThreads>>>(d_l, d_u, d_k1, d_k2, d_init_count, bufferSize, m, numLevels, numQueries);
+        cudaDeviceSynchronize();
 
         int* d_offset;
         cudaMalloc(&d_offset, numQueries * numLevels * sizeof(int));
@@ -334,13 +342,14 @@ public:
         int threadsPerBlock = 256;
         int blocks = (numQueries + threadsPerBlock - 1) / threadsPerBlock;
         exclusiveSum<<<blocks, threadsPerBlock>>>(d_init_count, d_offset, d_maxoffset, numQueries, numLevels);
-
+        cudaDeviceSynchronize();
         
         int* d_maxResultSize;
         cudaMalloc(&d_maxResultSize, sizeof(int));
         int reductionThreads = 256;
         int reductionBlocks = (numQueries + reductionThreads - 1) / reductionThreads;
         reduceSum<<<reductionBlocks, reductionThreads>>>(d_maxoffset, d_maxResultSize, numQueries);
+        cudaDeviceSynchronize();
 
         int maxResultSize;
         cudaMemcpy(&maxResultSize, d_maxResultSize, sizeof(int), cudaMemcpyDeviceToHost);
@@ -363,14 +372,16 @@ public:
         Pair<Key, Value>* d_result;
         cudaMalloc(&d_result, maxResultSize * sizeof(Pair<Key, Value>));
         collectElements<<<findBlocks, findThreads>>>(d_l, d_u, d_offset, d_result_offset, d_result, bufferSize, m, numLevels, numQueries);
-
-        sortBySegment(d_result, d_maxoffset, numQueries);
+        cudaDeviceSynchronize();
 
         int* d_counts;
         cudaMalloc(&d_counts, numQueries * sizeof(int));
-        count<<<blocks, threadsPerBlock>>>(d_result, d_maxoffset, d_result_offset, d_counts, numQueries);
+        count<<<blocks, threadsPerBlock>>>(d_result, d_maxoffset, d_result_offset, d_k1, d_k2, d_counts, numQueries);
+        cudaDeviceSynchronize();
         cudaMemcpy(counts, d_counts, numQueries * sizeof(int), cudaMemcpyDeviceToHost);
 
+        cudaFree(d_k1);
+        cudaFree(d_k2);
         cudaFree(d_l);
         cudaFree(d_u);
         cudaFree(d_init_count);
@@ -382,6 +393,12 @@ public:
     }
     
     __host__ void rangeKeys(const Key* k1, const Key* k2, int numQueries, Pair<Key, Value>* range, int* counts, int* range_offset) {
+        Key *d_k1, *d_k2;
+        cudaMalloc(&d_k1, numQueries * sizeof(Key));
+        cudaMalloc(&d_k2, numQueries * sizeof(Key));
+        cudaMemcpy(d_k1, k1, numQueries * sizeof(Key), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_k2, k2, numQueries * sizeof(Key), cudaMemcpyHostToDevice);
+        
         // lower and upper bounds index in every level of each query
         int* d_l;                
         int* d_u; 
@@ -400,7 +417,7 @@ public:
         int findThreads = 256;
         int totalfindThreads = numQueries * numLevels;
         int findBlocks = (totalfindThreads + findThreads - 1) / findThreads;
-        findBounds<<<findBlocks, findThreads>>>(d_l, d_u, k1, k2, d_init_count, bufferSize, m, numLevels, numQueries);
+        findBounds<<<findBlocks, findThreads>>>(d_l, d_u, d_k1, d_k2, d_init_count, bufferSize, m, numLevels, numQueries);
         
         int* d_offset;
         cudaMalloc(&d_offset, numQueries * numLevels * sizeof(int));
@@ -451,6 +468,8 @@ public:
         cudaMemcpy(counts, d_counts, numQueries * sizeof(int), cudaMemcpyDeviceToHost);
         cudaMemcpy(range_offset, d_result_offset, numQueries * sizeof(int), cudaMemcpyDeviceToHost);
         
+        cudaFree(d_k1);
+        cudaFree(d_k2);
         cudaFree(d_l);
         cudaFree(d_u);
         cudaFree(d_init_count);

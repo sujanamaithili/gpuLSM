@@ -442,18 +442,12 @@ void testCountKeysWithDuplicatesAndTombstones() {
     Key h_k1[numQueries] = {10, 20};
     Key h_k2[numQueries] = {30, 40};
 
-    // Allocate device memory for input keys
-    Key *d_k1, *d_k2;
-    cudaMalloc(&d_k1, numQueries * sizeof(Key));
-    cudaMalloc(&d_k2, numQueries * sizeof(Key));
-    cudaMemcpy(d_k1, h_k1, numQueries * sizeof(Key), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_k2, h_k2, numQueries * sizeof(Key), cudaMemcpyHostToDevice);
 
     // Allocate host memory for output counts
     int h_counts[numQueries];
 
     // Call `countKeys` method
-    tree.countKeys(d_k1, d_k2, numQueries, h_counts);
+    tree.countKeys(h_k1, h_k2, numQueries, h_counts);
 
     // Expected results considering tombstones (keys divisible by 5 are deleted)
     int expectedCounts[numQueries] = {16, 9}; // Adjusted counts excluding keys with tombstones
@@ -477,9 +471,6 @@ void testCountKeysWithDuplicatesAndTombstones() {
         std::cout << "Test failed: Mismatches found in the `countKeys` results.\n";
     }
 
-    // Free device memory
-    cudaFree(d_k1);
-    cudaFree(d_k2);
 }
 
 
@@ -548,11 +539,39 @@ void testLSMTreePerformance(int bufferSize) {
     std::chrono::duration<double> queryElapsed = queryEnd - queryStart;
     printf("Lookup time: %.6f seconds.\n", queryElapsed.count());
 
+    Key* lowerBounds = new Key[bufferSize];
+    Key* upperBounds = new Key[bufferSize];
+    int* counts = new int[bufferSize];
+
+    // Generate random ranges for count queries
+    for (int i = 0; i < bufferSize; ++i) {
+        lowerBounds[i] = keyDist(gen);
+        upperBounds[i] = lowerBounds[i] + keyDist(gen) % 12; 
+    }
+
+    auto countStart = std::chrono::high_resolution_clock::now();
+    tree.countKeys(lowerBounds, upperBounds, bufferSize, counts);
+    auto countEnd = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> countElapsed = countEnd - countStart;
+    printf("Count time: %.6f seconds.\n", countElapsed.count());
+
+    // Print a few results for validation
+    // printf("Sample count results (range -> count):\n");
+    // for (int i = 0; i < std::min(5, bufferSize); ++i) {
+    //     printf("[%d, %d] -> %d\n", lowerBounds[i], upperBounds[i], counts[i]);
+    // }
+
+
+
     // Free allocated memory
     delete[] kvPairs;
     delete[] keysToQuery;
     delete[] queryResults;
     delete[] queryFlags;
+    delete[] lowerBounds;
+    delete[] upperBounds;
+    delete[] counts;
+       
 }
 
 int main(int argc, char* argv[]) {
