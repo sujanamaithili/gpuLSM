@@ -5,9 +5,6 @@
 
 template <typename Key, typename Value>
 __global__ void collectElements(const int* d_l, const int* d_u, const int* d_offset, const int* d_result_offset, Pair<Key, Value>* d_result, int bufferSize, Pair<Key, Value>* m, int numLevels, int numQueries) {
-    // int queryId = blockIdx.x;
-    // int level = threadIdx.x;
-
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int queryId = idx / numLevels; 
     int level = idx % numLevels; 

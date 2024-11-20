@@ -9,7 +9,7 @@
 
 template <typename T>
 void printValue(const T& value) {
-    std::cout << value; // Generic case, works for types supported by std::cout
+    std::cout << value;
 }
 
 template <typename Key, typename Value>

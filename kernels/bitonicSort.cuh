@@ -83,12 +83,4 @@ void bitonicSortCPU(Pair<Key, Value>* arr, long int n) {
     }
 }
 
-template <typename Key, typename Value>
-bool isSorted(Pair<Key, Value>* arr, long int n) {
-    for (long int i = 1; i < n; i++) {
-        if (arr[i - 1].first > arr[i].first) return false;
-    }
-    return true;
-}
-
 #endif 

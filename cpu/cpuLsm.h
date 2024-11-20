@@ -58,10 +58,13 @@ public:
     void printAllLevels() const;
 
     void incrementBatchCounter() { numBatches++; }
+
     int getNumBatches() const { return numBatches; }
+    
     Pair<Key, Value>* getMemory() const { return memory; }
 
     int getNumLevels() const { return numLevels; }
+    
     int getBufferSize() const { return bufferSize; }
 
 };

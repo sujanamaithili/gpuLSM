@@ -488,10 +488,6 @@ void testLSMTreePerformance(int numLevels, int bufferSize) {
     std::chrono::duration<double> queryElapsed = queryEnd - queryStart;
     printf("Lookup time: %.6f seconds.\n", queryElapsed.count());
 
-    Key* lowerBounds = new Key[bufferSize];
-    Key* upperBounds = new Key[bufferSize];
-    int* counts = new int[bufferSize];
-
     // Free allocated memory
     delete[] kvPairs;
     delete[] keysToQuery;
