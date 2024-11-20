@@ -27,7 +27,7 @@ OUTPUT_FILE="lsm_test_summary.txt"
 for BUFFER_SIZE in "${BUFFER_SIZES[@]}"; do
     echo "Running GPU test for buffer size: $BUFFER_SIZE"
     # Run GPU program and capture output
-    GPU_OUTPUT=$($GPU_EXECUTABLE -p $BUFFER_SIZE)
+    GPU_OUTPUT=$($GPU_EXECUTABLE -p 4 $BUFFER_SIZE)
     
     # Parse GPU results
     GPU_INIT_TIME=$(echo "$GPU_OUTPUT" | grep "Init time" | awk '{print $3}')
@@ -36,7 +36,7 @@ for BUFFER_SIZE in "${BUFFER_SIZES[@]}"; do
 
     echo "Running CPU test for buffer size: $BUFFER_SIZE"
     # Run CPU program and capture output
-    CPU_OUTPUT=$(cd cpu && $CPU_EXECUTABLE -p $BUFFER_SIZE)
+    CPU_OUTPUT=$(cd cpu && $CPU_EXECUTABLE -p 4 $BUFFER_SIZE)
     
     # Parse CPU results
     CPU_INIT_TIME=$(echo "$CPU_OUTPUT" | grep "Init time" | awk '{print $3}')

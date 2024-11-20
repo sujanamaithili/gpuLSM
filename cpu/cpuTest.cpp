@@ -91,11 +91,10 @@ void testCountKeys() {
     std::cout << "testCountKeys passed.\n";
 }
 
-void testLSMTree(int bufferSize) {
+void testLSMTree(int numLevels, int bufferSize) {
     using Key = int;
     using Value = int;
 
-    const int numLevels = 4;
     int numUpdates = 4 * bufferSize;
     if (numUpdates <= 0 || (numUpdates & (numUpdates - 1)) != 0) {
         std::cout << "Error: Invalid size " << numUpdates << ". Skipping.\n";
@@ -172,21 +171,28 @@ int main(int argc, char* argv[]) {
         std::cout << "\nAll tests passed successfully.\n";
 
     } else if (flag == "-p") {
-        if (argc < 3) {
-            std::cerr << "Error: Performance test requires a buffer size.\n";
+        if (argc < 4) {
+            std::cerr << "Error: Performance test requires buffer size and number of levels.\n";
             return 1;
         }
 
-        // Parse buffer size from command line
-        int bufferSize = std::atoi(argv[2]);
-        if (bufferSize <= 0 || (bufferSize & (bufferSize - 1)) != 0) { // Check if buffer size is a positive power of 2
+        // Parse buffer size and number of levels from command line
+        int bufferSize = std::atoi(argv[3]);
+        int numLevels = std::atoi(argv[2]);
+
+        if (bufferSize <= 0 || (bufferSize & (bufferSize - 1)) != 0) {
             std::cerr << "Error: Buffer size must be a positive power of 2.\n";
             return 1;
         }
 
+        if (numLevels <= 0) {
+            std::cerr << "Error: Number of levels must be a positive integer.\n";
+            return 1;
+        }
+
         // Run the performance test
-        std::cout << "Running CPU test for buffer size: " << bufferSize << std::endl;
-        testLSMTree(bufferSize);
+        std::cout << "Running CPU test for buffer size: " << bufferSize << " and number of levels: " << numLevels << std::endl;
+        testLSMTree(numLevels, bufferSize);
 
     } else {
         std::cerr << "Error: Invalid flag. Use -t for tests or -p for performance test.\n";
@@ -195,7 +201,6 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
-
 
 
 
