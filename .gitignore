@@ -1,2 +1,7 @@
 .vscode
 *.0
+cpu/cpuTest
+cpu/lsm_test_summary.txt
+cpu_output.txt
+gpu_output.txt
+lsm_test_summary.txt
