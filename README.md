@@ -88,6 +88,18 @@ Running CPU test for buffer size: 16777216
 
 ```
 
+#### To run the basic tests of GPU implementation: 
 
+```bash
+make
+./GPULSM -t
+```
+
+#### For performance results for custom configurations:(Make sure that buffer size is a power of 2)
+
+```bash
+make
+./GPULSM -p numLevels bufferSize
+```
    
     
