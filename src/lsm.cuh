@@ -6,6 +6,11 @@
 #include <cuda.h>
 #include <optional>
 
+template <typename T>
+void printValue(const T& value) {
+    std::cout << value; // Generic case, works for types supported by std::cout
+}
+
 template <typename Key, typename Value>
 struct Pair {
     std::optional<Key> first;
@@ -14,7 +19,7 @@ struct Pair {
     __host__ __device__ Pair() : first(std::nullopt), second(std::nullopt) {}
     __host__ __device__ Pair(const std::optional<Key>& a, const std::optional<Value>& b) : first(a), second(b) {}
     __host__ __device__ Pair(std::nullopt_t, std::nullopt_t) : first(std::nullopt), second(std::nullopt) {}
-
+    __host__ __device__ Pair(const Key& a, const Value& b): first(std::optional<Key>(a)), second(std::optional<Value>(b)) {}
     __host__ __device__ void setKeyEmpty() { first = std::nullopt; }
     __host__ __device__ void setValueTombstone() { second = std::nullopt; }
 
@@ -240,8 +245,8 @@ public:
         // Create host memory to copy the level data
         Pair<Key, Value>* h_level = new Pair<Key, Value>[level_size];
         cudaError_t status = cudaMemcpy(h_level, memory + offset,
-                                    level_size * sizeof(Pair<Key, Value>),
-                                    cudaMemcpyDeviceToHost);
+                                        level_size * sizeof(Pair<Key, Value>),
+                                        cudaMemcpyDeviceToHost);
 
         if (status != cudaSuccess) {
             printf("Error copying level data from device: %s\n", cudaGetErrorString(status));
@@ -266,12 +271,18 @@ public:
             printf("Index\tKey\tValue\n");
             for (int i = 0; i < level_size; i++) {
                 if (!h_level[i].isKeyEmpty()) {
-                    printf("%d\t%d\t", i, *(h_level[i].first));
+                    // Print index and key
+                    printf("%d\t", i);
+                    printValue(*(h_level[i].first)); // Custom print for key
+                    printf("\t");
+
+                    // Print value or tombstone
                     if (!h_level[i].isValueTombstone()) {
-                        printf("%d\n", *(h_level[i].second));
+                        printValue(*(h_level[i].second)); // Custom print for value
                     } else {
-                        printf("tombstone\n");
+                        printf("tombstone");
                     }
+                    printf("\n");
                 }
             }
         }
@@ -454,5 +465,6 @@ public:
 };
 
 #endif // GPU_LSM_TREE_H
+
 
 

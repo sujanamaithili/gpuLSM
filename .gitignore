@@ -5,3 +5,5 @@ cpu/lsm_test_summary.txt
 cpu_output.txt
 gpu_output.txt
 lsm_test_summary.txt
+example
+GPULSM_example
