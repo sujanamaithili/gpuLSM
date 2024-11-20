@@ -118,86 +118,86 @@ void testRangeKeys() {
     std::cout << "testRangeKeys passed.\n";
 }
 
-void testLSMTree(const std::vector<int>& testSizes) {
+void testLSMTree(int bufferSize) {
     using Key = int;
     using Value = int;
 
-    for (int bufferSize : testSizes) {
-        const int numLevels = 4;
-        int numUpdates = 4 * bufferSize;
-        if (numUpdates <= 0 || (numUpdates & (numUpdates - 1)) != 0) {
-            std::cout << "Error: Invalid size " << numUpdates << ". Skipping.\n";
-            continue;
-        }
-
-        // Measure initialization time
-        auto initStart = std::chrono::high_resolution_clock::now();
-        lsmTree<Key, Value> tree(numLevels, bufferSize);
-        auto initEnd = std::chrono::high_resolution_clock::now();
-        std::cout << "Initialized LSM tree with " << bufferSize 
-                  << " keys in level 0" 
-                  << std::chrono::duration<double>(initEnd - initStart).count() 
-                  << " seconds.\n";
-
-        // Generate random key-value pairs
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<Key> keyDist(1, 1000);
-        std::uniform_int_distribution<Value> valueDist(1, 10000);
-
-        std::vector<Pair<Key, Value>> kvPairs(numUpdates);
-        for (int i = 0; i < numUpdates; ++i) {
-            kvPairs[i] = Pair<Key, Value>(
-                std::make_optional(keyDist(gen)),
-                std::make_optional(valueDist(gen))
-            );
-        }
-
-        // Measure update time
-        auto updateStart = std::chrono::high_resolution_clock::now();
-        if (!tree.updateKeys(kvPairs)) {
-            std::cout << "Error: Update failed for size " << numUpdates << ".\n";
-            continue;
-        }
-        auto updateEnd = std::chrono::high_resolution_clock::now();
-        std::cout << "Updated " << numUpdates 
-                  << " keys in " 
-                  << std::chrono::duration<double>(updateEnd - updateStart).count() 
-                  << " seconds.\n";
-
-        // Generate random keys for querying
-        std::vector<Key> queryKeys(bufferSize);
-        for (int i = 0; i < bufferSize; ++i) {
-            queryKeys[i] = keyDist(gen);
-        }
-
-        // Prepare results and flags
-        std::vector<Value> queryResults(queryKeys.size());
-        std::vector<bool> queryFlags(queryKeys.size());
-
-        // Measure query time
-        auto queryStart = std::chrono::high_resolution_clock::now();
-        tree.queryKeys(queryKeys, queryResults, queryFlags);
-        auto queryEnd = std::chrono::high_resolution_clock::now();
-        std::cout << "Queried " << queryKeys.size()
-                  << " keys in "
-                  << std::chrono::duration<double>(queryEnd - queryStart).count()
-                  << " seconds.\n";
+    const int numLevels = 4;
+    int numUpdates = 4 * bufferSize;
+    if (numUpdates <= 0 || (numUpdates & (numUpdates - 1)) != 0) {
+        std::cout << "Error: Invalid size " << numUpdates << ". Skipping.\n";
     }
+
+    // Measure initialization time
+    auto initStart = std::chrono::high_resolution_clock::now();
+    lsmTree<Key, Value> tree(numLevels, bufferSize);
+    auto initEnd = std::chrono::high_resolution_clock::now();
+    std::cout << "Init time: " << std::chrono::duration<double>(initEnd - initStart).count() << " seconds.\n";
+
+    // Generate random key-value pairs
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<Key> keyDist(1, 1000);
+    std::uniform_int_distribution<Value> valueDist(1, 10000);
+
+    std::vector<Pair<Key, Value>> kvPairs(numUpdates);
+    for (int i = 0; i < numUpdates; ++i) {
+        kvPairs[i] = Pair<Key, Value>(
+            std::make_optional(keyDist(gen)),
+            std::make_optional(valueDist(gen))
+        );
+    }
+
+    // Measure update time
+    auto updateStart = std::chrono::high_resolution_clock::now();
+    if (!tree.updateKeys(kvPairs)) {
+        std::cout << "Error: Update failed for size " << numUpdates << ".\n";
+    }
+    auto updateEnd = std::chrono::high_resolution_clock::now();
+    std::cout << "Insert time: " << std::chrono::duration<double>(updateEnd - updateStart).count() << " seconds.\n";
+
+    // Generate random keys for querying
+    std::vector<Key> queryKeys(bufferSize);
+    for (int i = 0; i < bufferSize; ++i) {
+        queryKeys[i] = keyDist(gen);
+    }
+
+    // Prepare results and flags
+    std::vector<Value> queryResults(queryKeys.size());
+    std::vector<bool> queryFlags(queryKeys.size());
+
+    // Measure query time
+    auto queryStart = std::chrono::high_resolution_clock::now();
+    tree.queryKeys(queryKeys, queryResults, queryFlags);
+    auto queryEnd = std::chrono::high_resolution_clock::now();
+    std::cout << "Lookup time: " << std::chrono::duration<double>(queryEnd - queryStart).count() << " seconds.\n";
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <buffer_size>\n";
+        return 1;
+    }
     // testUpdateKeys();
     // testQueryKeys();
     // testCountKeys();
     // testRangeKeys();
 
-    std::vector<int> testSizes = {16, 256, 4096, 65536, 1048576, 16777216};
-    testLSMTree(testSizes);
+    // Parse buffer size from command line
+    int bufferSize = std::atoi(argv[1]);
+    if (bufferSize <= 0 || (bufferSize & (bufferSize - 1)) != 0) { // Check if buffer size is a positive power of 2
+        std::cerr << "Error: Buffer size must be a positive power of 2.\n";
+        return 1;
+    }
+
+    // Run the performance test
+    std::cout << "Running CPU test for buffer size: " << bufferSize << std::endl;
+    testLSMTree(bufferSize);
 
     // std::cout << "All tests passed successfully.\n";
     return 0;
 }
+
 
 
 

@@ -483,83 +483,84 @@ void testCountKeysWithDuplicatesAndTombstones() {
 }
 
 
-void testLSMTreePerformance(const std::vector<int>& testSizes) {
+void testLSMTreePerformance(int bufferSize) {
     using Key = int;
     using Value = int;
 
-    for (int bufferSize : testSizes) {
-        const int numLevels = 4;
-        int numUpdates = 4 * bufferSize;
+    const int numLevels = 4;
+    int numUpdates = 4 * bufferSize;
 
-        if (numUpdates <= 0 || numUpdates % bufferSize != 0 || (numUpdates & (numUpdates - 1)) != 0) {
-            printf("Error: Invalid input %d. Skipping.\n", numUpdates);
-            continue;
-        }
-
-        // Measure initialization time
-        auto initStart = std::chrono::high_resolution_clock::now();
-        lsmTree<Key, Value> tree(numLevels, bufferSize);
-        auto initEnd = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> initElapsed = initEnd - initStart;
-        printf("Initialized LSM tree with %d levels and buffer size %d in %.6f seconds.\n",
-               numLevels, bufferSize, initElapsed.count());
-
-        // Generate random key-value pairs
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<Key> keyDist(1, 1000);
-        std::uniform_int_distribution<Value> valueDist(1, 10000);
-
-        Pair<Key, Value>* kvPairs = new Pair<Key, Value>[numUpdates];
-        for (int i = 0; i < numUpdates; ++i) {
-            kvPairs[i] = Pair<Key, Value>(
-                std::make_optional(keyDist(gen)),
-                std::make_optional(valueDist(gen))
-            );
-        }
-
-        // Measure update time
-        const int numBatches = numUpdates / bufferSize;
-        auto updateStart = std::chrono::high_resolution_clock::now();
-        for (int batch = 0; batch < numBatches; ++batch) {
-            // Pass a pointer to the batch start and its size
-            if (!tree.updateKeys(&kvPairs[batch * bufferSize], bufferSize)) {
-                printf("Error: Update failed for batch %d.\n", batch);
-                delete[] kvPairs;
-                return;
-            }
-        }
-        auto updateEnd = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> updateElapsed = updateEnd - updateStart;
-        printf("Updated %d keys in batches of %d in %.6f seconds.\n",
-               numUpdates, bufferSize, updateElapsed.count());
-
-        // Generate random keys for querying
-        Key* keysToQuery = new Key[bufferSize];
-        for (int i = 0; i < bufferSize; ++i) {
-            keysToQuery[i] = keyDist(gen);
-        }
-
-        // Prepare results and flags
-        Value* queryResults = new Value[bufferSize];
-        bool* queryFlags = new bool[bufferSize];
-
-        // Measure query time
-        auto queryStart = std::chrono::high_resolution_clock::now();
-        tree.queryKeys(keysToQuery, bufferSize, queryResults, queryFlags);
-        auto queryEnd = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> queryElapsed = queryEnd - queryStart;
-        printf("Queried %d keys in %.6f seconds.\n", bufferSize, queryElapsed.count());
-
-        // Free allocated memory
-        delete[] kvPairs;
-        delete[] keysToQuery;
-        delete[] queryResults;
-        delete[] queryFlags;
+    if (numUpdates <= 0 || numUpdates % bufferSize != 0 || (numUpdates & (numUpdates - 1)) != 0) {
+        printf("Error: Invalid input %d. Exiting.\n", numUpdates);
+        return;
     }
+
+    // Measure initialization time
+    auto initStart = std::chrono::high_resolution_clock::now();
+    lsmTree<Key, Value> tree(numLevels, bufferSize);
+    auto initEnd = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> initElapsed = initEnd - initStart;
+    printf("Init time: %.6f seconds.\n", initElapsed.count());
+
+    // Generate random key-value pairs
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<Key> keyDist(1, 1000);
+    std::uniform_int_distribution<Value> valueDist(1, 10000);
+
+    Pair<Key, Value>* kvPairs = new Pair<Key, Value>[numUpdates];
+    for (int i = 0; i < numUpdates; ++i) {
+        kvPairs[i] = Pair<Key, Value>(
+            std::make_optional(keyDist(gen)),
+            std::make_optional(valueDist(gen))
+        );
+    }
+
+    // Measure update time
+    const int numBatches = numUpdates / bufferSize;
+    auto updateStart = std::chrono::high_resolution_clock::now();
+    for (int batch = 0; batch < numBatches; ++batch) {
+        // Pass a pointer to the batch start and its size
+        if (!tree.updateKeys(&kvPairs[batch * bufferSize], bufferSize)) {
+            printf("Error: Update failed for batch %d.\n", batch);
+            delete[] kvPairs;
+            return;
+        }
+    }
+    auto updateEnd = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> updateElapsed = updateEnd - updateStart;
+    printf("Insert time: %.6f seconds.\n", updateElapsed.count());
+
+    // Generate random keys for querying
+    Key* keysToQuery = new Key[bufferSize];
+    for (int i = 0; i < bufferSize; ++i) {
+        keysToQuery[i] = keyDist(gen);
+    }
+
+    // Prepare results and flags
+    Value* queryResults = new Value[bufferSize];
+    bool* queryFlags = new bool[bufferSize];
+
+    // Measure query time
+    auto queryStart = std::chrono::high_resolution_clock::now();
+    tree.queryKeys(keysToQuery, bufferSize, queryResults, queryFlags);
+    auto queryEnd = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> queryElapsed = queryEnd - queryStart;
+    printf("Lookup time: %.6f seconds.\n", queryElapsed.count());
+
+    // Free allocated memory
+    delete[] kvPairs;
+    delete[] keysToQuery;
+    delete[] queryResults;
+    delete[] queryFlags;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <buffer_size>\n";
+        return 1;
+    }
+
     // printf("Running Test with Unique Keys:\n");
     // runTestWithUniqueKeys();
 
@@ -578,8 +579,17 @@ int main() {
     // printf("Running test for countKeys method with duplicates and tombstones:\n");
     // testCountKeysWithDuplicatesAndTombstones();
 
-    std::vector<int> testSizes = {16, 256, 4096, 65536, 1048576, 16777216};
-    testLSMTreePerformance(testSizes);
+    // Parse buffer size from command line
+    int bufferSize = std::atoi(argv[1]);
+    if (bufferSize <= 0 || (bufferSize & (bufferSize - 1)) != 0) { // Check if buffer size is a positive power of 2
+        std::cerr << "Error: Buffer size must be a positive power of 2.\n";
+        return 1;
+    }
+
+    // Run the performance test
+    std::cout << "Running test for buffer size: " << bufferSize << std::endl;
+    testLSMTreePerformance(bufferSize);
+
     return 0;
 }
 
