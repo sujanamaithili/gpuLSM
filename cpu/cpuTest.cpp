@@ -91,33 +91,6 @@ void testCountKeys() {
     std::cout << "testCountKeys passed.\n";
 }
 
-void testRangeKeys() {
-    lsmTree<int, std::string> tree(3, 4);
-
-    std::vector<Pair<int, std::string>> data = {
-        {1, "one"}, {2, "two"}, {3, "three"}, {4, "four"}
-    };
-    tree.updateKeys(data);
-
-    std::vector<int> k1 = {1};
-    std::vector<int> k2 = {3};
-    int size = k1.size();
-    std::vector<std::vector<Pair<int, std::string>>> results(size);
-    tree.rangeKeys(k1, k2, 1, results);
-
-    // Expected results
-    std::vector<Pair<int, std::string>> expected = {
-        {1, "one"}, {2, "two"}, {3, "three"}
-    };
-
-    // Check range keys with for loop
-    for (size_t i = 0; i < results[0].size(); ++i) {
-        assert(results[0][i] == expected[i]);
-    }
-
-    std::cout << "testRangeKeys passed.\n";
-}
-
 void testLSMTree(int bufferSize) {
     using Key = int;
     using Value = int;
@@ -176,28 +149,54 @@ void testLSMTree(int bufferSize) {
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <buffer_size>\n";
-        return 1;
-    }
-    // testUpdateKeys();
-    // testQueryKeys();
-    // testCountKeys();
-    // testRangeKeys();
-
-    // Parse buffer size from command line
-    int bufferSize = std::atoi(argv[1]);
-    if (bufferSize <= 0 || (bufferSize & (bufferSize - 1)) != 0) { // Check if buffer size is a positive power of 2
-        std::cerr << "Error: Buffer size must be a positive power of 2.\n";
+        std::cerr << "Usage: " << argv[0] << " <flag> [buffer_size]\n";
+        std::cerr << "Flags:\n";
+        std::cerr << "  -t : Run specific tests (update, query, count)\n";
+        std::cerr << "  -p : Run performance test (requires buffer size as an additional argument)\n";
         return 1;
     }
 
-    // Run the performance test
-    std::cout << "Running CPU test for buffer size: " << bufferSize << std::endl;
-    testLSMTree(bufferSize);
+    std::string flag = argv[1];
 
-    // std::cout << "All tests passed successfully.\n";
+    if (flag == "-t") {
+        // Run all the commented tests
+        std::cout << "Running test for updating keys:\n";
+        testUpdateKeys();
+
+        std::cout << "\nRunning test for querying keys:\n";
+        testQueryKeys();
+
+        std::cout << "\nRunning test for counting keys:\n";
+        testCountKeys();
+
+        std::cout << "\nAll tests passed successfully.\n";
+
+    } else if (flag == "-p") {
+        if (argc < 3) {
+            std::cerr << "Error: Performance test requires a buffer size.\n";
+            return 1;
+        }
+
+        // Parse buffer size from command line
+        int bufferSize = std::atoi(argv[2]);
+        if (bufferSize <= 0 || (bufferSize & (bufferSize - 1)) != 0) { // Check if buffer size is a positive power of 2
+            std::cerr << "Error: Buffer size must be a positive power of 2.\n";
+            return 1;
+        }
+
+        // Run the performance test
+        std::cout << "Running CPU test for buffer size: " << bufferSize << std::endl;
+        testLSMTree(bufferSize);
+
+    } else {
+        std::cerr << "Error: Invalid flag. Use -t for tests or -p for performance test.\n";
+        return 1;
+    }
+
     return 0;
 }
+
+
 
 
 

@@ -32,10 +32,8 @@ void runTestWithUniqueKeys() {
             printf("Error: Insertion failed for batch starting at index %d.\n", i);
             return;
         }
-        printf("Successfully inserted batch starting at index %d.\n", i);
     }
 
-    printf("\nTesting correctness of unique key-value pairs:\n");
     int numCorrect = 0;
     bool foundFlags[totalPairs];
     Value results[totalPairs];
@@ -58,7 +56,6 @@ void runTestWithUniqueKeys() {
         }
     }
 
-    printf("\nCorrectly retrieved %d out of %d key-value pairs.\n", numCorrect, totalPairs);
     if (numCorrect == totalPairs) {
         printf("Test passed: All key-value pairs were correctly inserted and retrieved.\n");
     } else {
@@ -90,10 +87,8 @@ void runTestWithDuplicateKeys() {
             printf("Error: Insertion failed for batch starting at index %d.\n", i);
             return;
         }
-        printf("Successfully inserted batch starting at index %d.\n", i);
     }
 
-    printf("\nTesting correctness with duplicate key-value pairs:\n");
     int numCorrect = 0;
     bool foundFlags[32];
     Value results[32];
@@ -117,7 +112,6 @@ void runTestWithDuplicateKeys() {
         }
     }
 
-    printf("\nCorrectly retrieved %d out of 32 key-value pairs with duplicate keys.\n", numCorrect);
     if (numCorrect == 32) {
         printf("Test passed: All duplicate key-value pairs returned the last inserted value.\n");
     } else {
@@ -148,7 +142,6 @@ void runTestWithDeletedKeys() {
             printf("Error: Insertion failed for batch starting at index %d.\n", i);
             return;
         }
-        printf("Successfully inserted batch starting at index %d.\n", i);
     }
 
     const int numKeysToDelete = 32;
@@ -161,10 +154,8 @@ void runTestWithDeletedKeys() {
         printf("Error: Deletion failed for keys.\n");
         return;
     }
-    printf("Successfully deleted %d keys.\n", numKeysToDelete);
-    tree.printAllLevels();
+    // tree.printAllLevels();
 
-    printf("\nTesting correctness of deleted key queries:\n");
     int numCorrect = 0;
     bool foundFlags[numKeysToDelete];
     Value results[numKeysToDelete];
@@ -186,7 +177,6 @@ void runTestWithDeletedKeys() {
         }
     }
 
-    printf("\nCorrectly handled %d out of %d deleted keys.\n", numCorrect, numKeysToDelete);
     if (numCorrect == numKeysToDelete) {
         printf("Test passed: All deleted keys were correctly identified.\n");
     } else {
@@ -194,7 +184,6 @@ void runTestWithDeletedKeys() {
     }
 
     // Test non-deleted keys
-    printf("\nTesting correctness of non-deleted key queries:\n");
     numCorrect = 0;
     const int numNonDeletedKeys = 32;
     Key nonDeletedKeys[numNonDeletedKeys];
@@ -220,9 +209,6 @@ void runTestWithDeletedKeys() {
         }
     }
 
-    printf("\nCorrectly retrieved %d out of %d non-deleted key-value pairs.\n", 
-           numCorrect, 
-           numNonDeletedKeys);
     if (numCorrect == numNonDeletedKeys) {
         printf("Test passed: All non-deleted key-value pairs were correctly retrieved.\n");
     } else {
@@ -245,12 +231,6 @@ void testMergeWithTombstones() {
         {2, 20}, {3, 30}, {5, std::nullopt}, {8, 80}, {9, std::nullopt}
     };
 
-    // Pair<Key, Value> h_arr1[size1] = {
-    //     {1, 10}, {3, 40}, {5, 50}, {7, 60}, {9, 70}
-    // };
-    // Pair<Key, Value> h_arr2[size2] = {
-    //     {2, 20}, {3, 30}, {5, 40}, {8, 80}, {9, 80}
-    // };
     Pair<Key, Value> h_merged[size1 + size2];
 
     // Allocate device memory and copy data from host to device
@@ -270,23 +250,7 @@ void testMergeWithTombstones() {
     std::vector<Pair<Key, Value>> expectedResult = {
         {1, std::nullopt}, {2, 20}, {3, std::nullopt}, {3, 30}, {5, 50}, {5, std::nullopt}, {7, std::nullopt}, {8, 80}, {9, 70}, {9, std::nullopt}
     };
-    // std::vector<Pair<Key, Value>> expectedResult = {
-    //     {1, 10}, {2, 20}, {3, 40}, {3, 30}, {5, 50}, {5, 40}, {7, 60}, {8, 80}, {9, 70}, {9, 80}
-    // };
 
-    // Print the merged array and expected result side by side
-    std::cout << "\nMerged array vs. Expected result:\n";
-    std::cout << std::setw(20) << "Merged Array" << std::setw(25) << "Expected Result\n";
-    std::cout << "-----------------------------------------------------------\n";
-    for (size_t i = 0; i < expectedResult.size(); ++i) {
-        std::string mergedKey = h_merged[i].first.has_value() ? std::to_string(h_merged[i].first.value()) : "nullopt";
-        std::string mergedValue = h_merged[i].second.has_value() ? std::to_string(h_merged[i].second.value()) : "nullopt";
-        std::string expectedKey = expectedResult[i].first.has_value() ? std::to_string(expectedResult[i].first.value()) : "nullopt";
-        std::string expectedValue = expectedResult[i].second.has_value() ? std::to_string(expectedResult[i].second.value()) : "nullopt";
-
-        std::cout << std::setw(10) << "(" + mergedKey + ", " + mergedValue + ")"
-                  << std::setw(20) << "(" + expectedKey + ", " + expectedValue + ")\n";
-    }
 
     // Validate the result
     bool isValid = true;
@@ -306,9 +270,9 @@ void testMergeWithTombstones() {
     }
 
     if (isValid) {
-        std::cout << "\nTest passed: Merge with duplicates and tombstones handled correctly.\n";
+        std::cout << "Test passed: Merge with duplicates and tombstones handled correctly.\n";
     } else {
-        std::cout << "\nTest failed: Merge with duplicates and tombstones produced incorrect results.\n";
+        std::cout << "Test failed: Merge with duplicates and tombstones produced incorrect results.\n";
     }
 
     // Free device memory
@@ -346,16 +310,6 @@ void testBitonicSortWithNulloptGPU() {
     // Copy sorted data back to host
     cudaMemcpy(h_arr, d_arr, N * sizeof(DataType), cudaMemcpyDeviceToHost);
 
-    // Print the sorted array
-    std::cout << "Sorted array (GPU):\n";
-    for (long int i = 0; i < N; i++) {
-        std::cout << "("
-                  << (h_arr[i].first.has_value() ? std::to_string(h_arr[i].first.value()) : "nullopt")
-                  << ", "
-                  << (h_arr[i].second.has_value() ? std::to_string(h_arr[i].second.value()) : "nullopt")
-                  << ") ";
-    }
-    std::cout << "\n";
 
     // Verify the sorted array against the expected result
     bool isCorrect = true;
@@ -407,7 +361,6 @@ void testCountKeysWithDuplicatesAndTombstones() {
         std::cerr << "Error: Insertion failed for the initial batch.\n";
         return;
     }
-    std::cout << "Successfully inserted the initial batch of keys.\n";
 
     // Step 2: Insert a batch of duplicate keys with updated values
     for (int i = 0; i < bufferSize; ++i) {
@@ -418,7 +371,6 @@ void testCountKeysWithDuplicatesAndTombstones() {
         std::cerr << "Error: Insertion failed for the batch of duplicates.\n";
         return;
     }
-    std::cout << "Successfully inserted the batch of duplicates with updated values.\n";
 
     // Step 3: Insert a batch with tombstones (simulating deletions)
     for (int i = 0; i < bufferSize; ++i) {
@@ -433,10 +385,9 @@ void testCountKeysWithDuplicatesAndTombstones() {
         std::cerr << "Error: Insertion failed for the batch with tombstones.\n";
         return;
     }
-    std::cout << "Successfully inserted the batch with tombstones.\n";
 
     // Print the LSM tree levels after insertion
-    tree.printAllLevels();
+    // tree.printAllLevels();
 
     // Define keys for lower and upper bound queries
     Key h_k1[numQueries] = {10, 20};
@@ -453,7 +404,6 @@ void testCountKeysWithDuplicatesAndTombstones() {
     int expectedCounts[numQueries] = {16, 9}; // Adjusted counts excluding keys with tombstones
 
     // Validate the results
-    std::cout << "\nTesting `countKeys` method with duplicates and tombstones:\n";
     bool isCorrect = true;
     for (int queryId = 0; queryId < numQueries; ++queryId) {
         std::cout << "Query " << queryId << " -> Count: " << h_counts[queryId] << "\n";
@@ -553,41 +503,60 @@ void testLSMTreePerformance(int bufferSize) {
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <buffer_size>\n";
+        std::cerr << "Usage: " << argv[0] << " <flag> [buffer_size]\n";
+        std::cerr << "Flags:\n";
+        std::cerr << "  -t : Run specific tests\n";
+        std::cerr << "  -p : Run performance test (requires buffer size as an additional argument)\n";
         return 1;
     }
 
-    // printf("Running Test with Unique Keys:\n");
-    // runTestWithUniqueKeys();
+    std::string flag = argv[1];
 
-    // printf("\nRunning Test with Duplicate Keys:\n");
-    // runTestWithDuplicateKeys();
+    if (flag == "-t") {
+        // Run all the commented tests
+        std::cout << "Running test with unique keys:\n";
+        runTestWithUniqueKeys();
 
-    // printf("\nRunning Test with Deleted Keys:\n");
-    // runTestWithDeletedKeys();
+        std::cout << "\nRunning test with duplicate keys:\n";
+        runTestWithDuplicateKeys();
 
-    // printf("\nRunning test for merge with tombstones:\n");
-    // testMergeWithTombstones();
+        std::cout << "\nRunning test for merge with tombstones:\n";
+        testMergeWithTombstones();
 
-    // printf("\nRunning test for sort with nullopt:\n");
-    // testBitonicSortWithNulloptGPU();
+        std::cout << "\nRunning test for sort with nullopt:\n";
+        testBitonicSortWithNulloptGPU();
 
-    // printf("Running test for countKeys method with duplicates and tombstones:\n");
-    // testCountKeysWithDuplicatesAndTombstones();
+        std::cout << "\nRunning test for countKeys method with duplicates and tombstones:\n";
+        testCountKeysWithDuplicatesAndTombstones();
 
-    // Parse buffer size from command line
-    int bufferSize = std::atoi(argv[1]);
-    if (bufferSize <= 0 || (bufferSize & (bufferSize - 1)) != 0) { // Check if buffer size is a positive power of 2
-        std::cerr << "Error: Buffer size must be a positive power of 2.\n";
+        std::cout << "\nRunning test with deleted keys:\n";
+        runTestWithDeletedKeys();
+
+    } else if (flag == "-p") {
+        if (argc < 3) {
+            std::cerr << "Error: Performance test requires a buffer size.\n";
+            return 1;
+        }
+
+        // Parse buffer size from command line
+        int bufferSize = std::atoi(argv[2]);
+        if (bufferSize <= 0 || (bufferSize & (bufferSize - 1)) != 0) { // Check if buffer size is a positive power of 2
+            std::cerr << "Error: Buffer size must be a positive power of 2.\n";
+            return 1;
+        }
+
+        // Run the performance test
+        std::cout << "Running test for buffer size: " << bufferSize << std::endl;
+        testLSMTreePerformance(bufferSize);
+
+    } else {
+        std::cerr << "Error: Invalid flag. Use -t for tests or -p for performance test.\n";
         return 1;
     }
-
-    // Run the performance test
-    std::cout << "Running test for buffer size: " << bufferSize << std::endl;
-    testLSMTreePerformance(bufferSize);
 
     return 0;
 }
+
 
 
 
