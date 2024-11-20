@@ -172,21 +172,6 @@ void testLSMTree(int bufferSize) {
     auto queryEnd = std::chrono::high_resolution_clock::now();
     std::cout << "Lookup time: " << std::chrono::duration<double>(queryEnd - queryStart).count() << " seconds.\n";
         
-    std::vector<Key> lowerBounds(bufferSize);
-    std::vector<Key> upperBounds(bufferSize);
-    std::vector<Key> counts(bufferSize);
-
-    // Generate random ranges for count queries
-    for (int i = 0; i < bufferSize; ++i) {
-        lowerBounds[i] = keyDist(gen);
-        upperBounds[i] = lowerBounds[i] + keyDist(gen) % 12; 
-    }
-
-    auto countStart = std::chrono::high_resolution_clock::now();
-    tree.countKeys(lowerBounds, upperBounds, bufferSize, counts);
-    auto countEnd = std::chrono::high_resolution_clock::now();
-    std::cout << "Count time: " << std::chrono::duration<double>(countEnd - countStart).count() << " seconds.\n";
-    
 }
 
 int main(int argc, char* argv[]) {

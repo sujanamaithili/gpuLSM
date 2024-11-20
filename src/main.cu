@@ -543,34 +543,11 @@ void testLSMTreePerformance(int bufferSize) {
     Key* upperBounds = new Key[bufferSize];
     int* counts = new int[bufferSize];
 
-    // Generate random ranges for count queries
-    for (int i = 0; i < bufferSize; ++i) {
-        lowerBounds[i] = keyDist(gen);
-        upperBounds[i] = lowerBounds[i] + keyDist(gen) % 12; 
-    }
-
-    auto countStart = std::chrono::high_resolution_clock::now();
-    tree.countKeys(lowerBounds, upperBounds, bufferSize, counts);
-    auto countEnd = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> countElapsed = countEnd - countStart;
-    printf("Count time: %.6f seconds.\n", countElapsed.count());
-
-    // Print a few results for validation
-    // printf("Sample count results (range -> count):\n");
-    // for (int i = 0; i < std::min(5, bufferSize); ++i) {
-    //     printf("[%d, %d] -> %d\n", lowerBounds[i], upperBounds[i], counts[i]);
-    // }
-
-
-
     // Free allocated memory
     delete[] kvPairs;
     delete[] keysToQuery;
     delete[] queryResults;
     delete[] queryFlags;
-    delete[] lowerBounds;
-    delete[] upperBounds;
-    delete[] counts;
        
 }
 
